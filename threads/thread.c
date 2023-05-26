@@ -28,6 +28,8 @@
    that are ready to run but not actually running. */
 static struct list ready_list;
 
+static struct list sleep_list;
+
 /* Idle thread. */
 static struct thread *idle_thread;
 
@@ -62,6 +64,7 @@ static void init_thread (struct thread *, const char *name, int priority);
 static void do_schedule(int status);
 static void schedule (void);
 static tid_t allocate_tid (void);
+void wakeup(int64_t g_ticks);
 
 /* Returns true if T appears to point to a valid thread. */
 #define is_thread(t) ((t) != NULL && (t)->magic == THREAD_MAGIC)
@@ -108,6 +111,7 @@ thread_init (void) {
 	/* Init the globla thread context */
 	lock_init (&tid_lock);
 	list_init (&ready_list);
+	list_init (&sleep_list);
 	list_init (&destruction_req);
 
 	/* Set up a thread structure for the running thread. */
@@ -306,6 +310,50 @@ thread_yield (void) {
 		list_push_back (&ready_list, &curr->elem);
 	do_schedule (THREAD_READY);
 	intr_set_level (old_level);
+}
+
+void thread_sleep(int64_t ticks){
+  /* if the current thread is not idle thread,
+	change the state of the caller thread to BLOCKED,
+	store the local tick to wake up,
+	update the global tick if necessary,
+	and call schedule() */
+  /* When you manipulate thread list, disable interrupt! */
+	struct thread *curr = thread_current ();
+	enum intr_level old_level;
+
+	old_level = intr_disable ();
+
+	if (curr != idle_thread) {
+		list_push_back (&sleep_list, &curr->elem);
+		curr->status = THREAD_BLOCKED;
+		curr->wakeup_tick = ticks;
+		schedule();
+	}
+	intr_set_level (old_level);
+}
+
+void wakeup(int64_t g_ticks) {
+	/* code to add: 
+	check sleep list and the global tick.
+	find any threads to wake up,
+	move them to the ready list if necessary.
+	update the global tick.
+	*/
+	struct list_elem *current_elem = list_head(&sleep_list)->next;
+	struct thread *current_thread;
+	while (current_elem != list_end(&sleep_list)) {
+		current_thread = list_entry(current_elem, struct thread, elem);
+		struct list_elem *memo_next = list_next(current_elem);
+		if (current_thread->wakeup_tick <= g_ticks) {
+			list_remove(current_elem);
+			thread_unblock(current_thread);
+			current_elem = memo_next;
+		}
+		else {
+			current_elem = list_next(current_elem);
+		}
+	}
 }
 
 /* Sets the current thread's priority to NEW_PRIORITY. */
