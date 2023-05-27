@@ -65,6 +65,7 @@ static void do_schedule(int status);
 static void schedule (void);
 static tid_t allocate_tid (void);
 void wakeup(int64_t g_ticks);
+bool cmp_priority (const struct list_elem *a_elem, const struct list_elem *b_elem, void *aux);
 
 /* Returns true if T appears to point to a valid thread. */
 #define is_thread(t) ((t) != NULL && (t)->magic == THREAD_MAGIC)
@@ -210,6 +211,10 @@ thread_create (const char *name, int priority,
 
 	/* Add to run queue. */
 	thread_unblock (t);
+	/* compare the priorities of the currently running thread and the newly inserted one. Yield the CPU if the newly arriving thread has higher priority*/
+	if (thread_get_priority() < t->priority) {
+		thread_yield();
+	}
 
 	return tid;
 }
@@ -244,9 +249,18 @@ thread_unblock (struct thread *t) {
 
 	old_level = intr_disable ();
 	ASSERT (t->status == THREAD_BLOCKED);
-	list_push_back (&ready_list, &t->elem);
+	// list_push_back (&ready_list, &t->elem);
+	list_insert_ordered(&ready_list, &t->elem, cmp_priority, NULL);
 	t->status = THREAD_READY;
 	intr_set_level (old_level);
+}
+
+/* Returns true if value A is less than value B, false
+   otherwise. */
+bool cmp_priority (const struct list_elem *a_elem, const struct list_elem *b_elem, void *aux) {
+  int a = list_entry (a_elem, struct thread, elem)->priority;
+  int b = list_entry (b_elem, struct thread, elem)->priority;
+  return a > b;
 }
 
 /* Returns the name of the running thread. */
@@ -307,7 +321,9 @@ thread_yield (void) {
 
 	old_level = intr_disable ();
 	if (curr != idle_thread)
-		list_push_back (&ready_list, &curr->elem);
+		// FIXME: insert to ready_list in priority order
+		// list_push_back (&ready_list, &curr->elem);
+		list_insert_ordered(&ready_list, &curr->elem, cmp_priority, NULL);
 	do_schedule (THREAD_READY);
 	intr_set_level (old_level);
 }
@@ -360,6 +376,7 @@ void wakeup(int64_t g_ticks) {
 void
 thread_set_priority (int new_priority) {
 	thread_current ()->priority = new_priority;
+	// FIXME : Reorder the ready_list
 }
 
 /* Returns the current thread's priority. */
