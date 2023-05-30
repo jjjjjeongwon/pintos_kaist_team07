@@ -66,6 +66,8 @@ static void schedule (void);
 static tid_t allocate_tid (void);
 void wakeup(int64_t g_ticks);
 bool cmp_priority (const struct list_elem *a_elem, const struct list_elem *b_elem, void *aux);
+void refresh_priority(void);
+void donate_priority(void);
 
 /* Returns true if T appears to point to a valid thread. */
 #define is_thread(t) ((t) != NULL && (t)->magic == THREAD_MAGIC)
@@ -373,11 +375,22 @@ void wakeup(int64_t g_ticks) {
 }
 
 /* Sets the current thread's priority to NEW_PRIORITY. */
+// 우근이형이 이거 문제라고 뉘앙스를 풍김
 void
 thread_set_priority (int new_priority) {
+	thread_current ()->pre_priority = new_priority; 
 	// FIXME: 현재 쓰레드의 우선 순위와 ready_list에서 가장 높은 우선 순위를 비교하여 스케쥴링 하는 함수 호출
-	thread_current ()->priority = new_priority;
-	thread_yield();
+	refresh_priority();
+	// thread_yield();
+	// donate_priority();
+	test_max_priority();
+}
+
+void test_max_priority(void) {
+// 	ready_list에서 우선 순위가 가장 높은 쓰레드와 현재 쓰레드의 우선 순위를
+// 비교.
+//  현재 쓰레드의 우선수위가 더 작다면 thread_yield()
+	if (list_entry(ready_list.head.next, struct thread, elem)->priority > thread_get_priority()) {thread_yield();}
 }
 
 /* Returns the current thread's priority. */
@@ -475,6 +488,9 @@ init_thread (struct thread *t, const char *name, int priority) {
 	t->tf.rsp = (uint64_t) t + PGSIZE - sizeof (void *);
 	t->priority = priority;
 	t->magic = THREAD_MAGIC;
+	t->pre_priority = priority;
+	t->wait_on_lock = NULL;
+	list_init(&t->list_donation);
 }
 
 /* Chooses and returns the next thread to be scheduled.  Should
