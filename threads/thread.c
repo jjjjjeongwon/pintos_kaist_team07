@@ -491,6 +491,10 @@ init_thread (struct thread *t, const char *name, int priority) {
 	t->pre_priority = priority;
 	t->wait_on_lock = NULL;
 	list_init(&t->list_donation);
+
+	// NOTE: For Advanced Scheduler
+	// t->nice = NICE_DEFAULT;
+	// t->recent_cpu = RECENT_CPU_DEFAULT;
 }
 
 /* Chooses and returns the next thread to be scheduled.  Should

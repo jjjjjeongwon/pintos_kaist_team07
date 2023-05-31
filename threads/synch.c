@@ -193,10 +193,11 @@ lock_init (struct lock *lock) {
 
 /* priority donation을 수행 */
 void donate_priority(void) {
-	// 필요에 따라 donate 진행
 	struct thread *curr = thread_current();
+	int cmp_pri = curr->priority;
 	while(curr->wait_on_lock){
-		curr->wait_on_lock->holder->priority = curr->priority;
+		if (curr->wait_on_lock->holder->priority < cmp_pri) curr->wait_on_lock->holder->priority = cmp_pri;
+		// curr->wait_on_lock->holder->priority = curr->priority;
 		curr = curr->wait_on_lock->holder;
 	}
 }
@@ -245,13 +246,9 @@ lock_try_acquire (struct lock *lock) {
 	return success;
 }
 
-// NOTE: 아래 lock_release에서 이 함수를 왜 호출했을까? 락을 놓아주고, 지금까지 그 락을 기다리던 스레드들에게 받았던 donation들을 뱉어내고, 본인의 본래 우선순위로 돌려놓기 위해 호출했음.
 void refresh_priority(void) {
 	struct thread *curr = thread_current();
-	// FIXME: Multiple Donation을 구현한 부분. 헤드를 제외한 다른 스레드의 우선순위가 바뀌어서 헤드가 아닌 뒤에 있는 스레드의 우선순위를
-	// donation 받아야 될 경우를 대비해서, donation_list를 정렬한 후, 헤드의 우선순위를 비교하여 가져오던가, for문을 통해 donation_list를 순회하며
-	// 가장 큰 우선순위를 가져오고, 그 우선순외와 비교하여 donation을 수행하도록 수정할 것.
-	//curr->priority = curr->pre_priority;
+
 	int max_prio = list_entry(list_begin(&curr->list_donation), struct thread, d_elem)->priority;
 
 	curr->priority = curr->pre_priority; 
@@ -270,14 +267,7 @@ void refresh_priority(void) {
 }
 
 /* 우선순위를 다시 계산 */
-// NOTE: 가독성 개선했고, 함수에 대해 이해를 마쳤음. remove_with_lock(struct lock *lock)는 다음의 과정을 수행함
-/*
-락을 점유하고 있는 스레드를 점유 해제시키고, 홀더를 NULL로 바꿔주기 전에, 
-이 락을 기다리는 리스트를 순회하여 '이제는 이 락을 필요로 하지 않는 스레드'를 빼주어 리스트를 갱신시켜 주는 작업임!
-기다리던 스레드들이 이제는 더 이상 이 락을 필요로 하지 않아서 wait_on_lock이 해당 락이 아니라 NULL이거나, 다른 락에 wait상태로 바뀌어 있다면,
-이 녀석들의 주소를 waiters 리스트에 넣어둔 상태로 내버려 둔다면 락을 필요로 하지도 않는 스레드가 락을 기다리는, 이상한 상황이 야기될 것.
-확실하진 않아서 우근이형한테 자문 구하면 좋을듯
-*/
+// NOTE: 가독성 개선했고, 함수에 대해 이해를 마쳤음. 
 void remove_with_lock(struct lock *lock){
 	struct thread * curr = thread_current();
 	struct list_elem *curr_elem = list_begin(&curr->list_donation);

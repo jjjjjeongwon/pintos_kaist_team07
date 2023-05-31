@@ -97,6 +97,9 @@ struct thread {
 	struct list list_donation;         // multiple donation을 고려하기 위한 리스트
 	struct list_elem d_elem; //해당 리스트를 위한 elem도 추가
 
+	// NOTE: For Advanced Scheduler 
+	int nice;
+	int recent_cpu;
 
 	/* Shared between thread.c and synch.c. */
 	struct list_elem elem;              /* List element. */
