@@ -1,3 +1,5 @@
+/* ELF 바이너리(=ELF 실행파일)들을 로드하고 프로세스를 실행합니다 
+* ELF: ELF는 많은 운영체제에서 목적 파일, 공유 라이브러리, 그리고 실행 파일들을 위해 사용되는 파일 포맷*/
 #include "userprog/process.h"
 #include <debug.h>
 #include <inttypes.h>
@@ -26,6 +28,7 @@ static void process_cleanup (void);
 static bool load (const char *file_name, struct intr_frame *if_);
 static void initd (void *f_name);
 static void __do_fork (void *);
+void argument_stack(char **parse, int count, void **rsp);
 
 /* General process initializer for initd and other process. */
 static void
@@ -160,11 +163,22 @@ error:
 
 /* Switch the current execution context to the f_name.
  * Returns -1 on fail. */
-int
-process_exec (void *f_name) {
-	char *file_name = f_name;
+/* Switch the current execution context to the f_name.
+ * Returns -1 on fail. */
+int process_exec(void *f_name)
+{
 	bool success;
+	char *file_name = f_name;
+	char *argv[64];
+	int argc = 0;
+	char **save_ptr;
 
+	argv[0] = strtok_r(f_name, " ", &save_ptr);
+
+	while (argv[argc])
+	{
+		argv[++argc] = strtok_r(NULL, " ", &save_ptr);
+	}
 	/* We cannot use the intr_frame in the thread structure.
 	 * This is because when current thread rescheduled,
 	 * it stores the execution information to the member. */
@@ -174,20 +188,95 @@ process_exec (void *f_name) {
 	_if.eflags = FLAG_IF | FLAG_MBS;
 
 	/* We first kill the current context */
-	process_cleanup ();
+	process_cleanup();
 
 	/* And then load the binary */
-	success = load (file_name, &_if);
+	success = load(argv[0], &_if);
 
+	argument_stack(argv, argc, &_if.rsp);
 	/* If load failed, quit. */
-	palloc_free_page (file_name);
+	palloc_free_page(argv[0]);
 	if (!success)
 		return -1;
 
+	_if.R.rdi = argc;
+	_if.R.rsi = *(uintptr_t **)_if.rsp + 1;
+
+
+	/* 디버깅 확인용 */
+	hex_dump(_if.rsp, _if.rsp, USER_STACK - _if.rsp, true);
 	/* Start switched process. */
-	do_iret (&_if);
-	NOT_REACHED ();
+	do_iret(&_if);
+	NOT_REACHED();
 }
+
+void argument_stack(char **parse, int count, void **rsp)
+{
+    // --(*rsp);
+    /* argv의 문자열 차례로 저장 */
+    for (int i = count - 1; i >= 0; i--)
+    {
+        for (int j = strlen(parse[i]); j >= 0; j--)
+        {
+            printf("writing %c on %p\n", parse[i][j], *rsp);
+            (*rsp) -= sizeof(char);
+            *(char *)(*rsp) = parse[i][j];
+        }
+    }
+
+    /* word-align 저장 */
+    *rsp = (void *)(((uintptr_t)(*rsp) - 1) & ~(uintptr_t)7);
+
+    /* argv[argc] 0으로 저장 */
+    (*rsp) -= sizeof(uintptr_t);
+    *(uintptr_t *)(*rsp) = 0;
+
+    /* argv[0] ~ argv[argc-1]의 주소값 저장 */
+    for (int i = count - 1; i >= 0; i--)
+    {
+        (*rsp) -= sizeof(uintptr_t);
+        *(uintptr_t *)(*rsp) = (uintptr_t)(*rsp) + sizeof(uintptr_t);
+        printf("writing argv on %p\n", *rsp);
+    }
+
+    /* return address 저장 */
+    (*rsp) -= sizeof(uintptr_t);
+    *(uintptr_t *)(*rsp) = 0;
+}
+
+
+// void argument_stack(char **parse, int count, void *rsp)
+// {
+// 	// --rsp;
+// 	/* argv의 문자열 차례로 저장 */
+// 	for (int i = count-1; i >= 0; i--)
+// 	{
+// 		for (int j = strlen(parse[i]); j >= 0; j--)
+// 		{
+// 			printf("writing %c on %p\n", parse[i][j], rsp);
+// 			rsp -= sizeof(char);
+// 			*(char *)rsp = parse[i][j];
+// 		}
+// 	}
+
+// 	/* word-align 저장 */
+// 	rsp = ((uintptr_t)rsp - 1) & ~(uintptr_t)7;
+
+// 	/* argv[argc] 0으로 저장 */
+// 	rsp -= sizeof(uintptr_t);
+// 	*(uintptr_t *)rsp = 0;
+
+// 	/* argv[0] ~ argv[argc-1]의 주소값 저장 */
+// 	for (int i = count - 1; i >= 0; i--)
+// 	{
+// 		rsp -= sizeof(uintptr_t);
+// 		*(uintptr_t *)rsp = (uintptr_t)rsp + sizeof(uintptr_t);
+// 	}
+
+// 	/* return address 저장 */
+// 	rsp -= sizeof(uintptr_t);
+// 	*(uintptr_t *)rsp = 0;
+// }
 
 
 /* Waits for thread TID to die and returns its exit status.  If
@@ -204,6 +293,7 @@ process_wait (tid_t child_tid UNUSED) {
 	/* XXX: Hint) The pintos exit if process_wait (initd), we recommend you
 	 * XXX:       to add infinite loop here before
 	 * XXX:       implementing the process_wait. */
+	for(int i =0;i<10000000;i++){}
 	return -1;
 }
 
