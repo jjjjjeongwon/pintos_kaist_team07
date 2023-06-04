@@ -1,0 +1,15 @@
+{
+    "files.associations": {
+        "rbtree.h": "c",
+        "stdlib.h": "c",
+        "string.h": "c",
+        "csapp.h": "c",
+        "new": "c",
+        "array": "c",
+        "initializer_list": "c",
+        "limits": "c",
+        "type_traits": "c",
+        "*.tcc": "c",
+        "thread.h": "c"
+    }
+}

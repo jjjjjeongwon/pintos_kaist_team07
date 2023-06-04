@@ -1,3 +1,6 @@
+/*유저 프로그램이 특별한 접근 권한을 필요로 하거나 금지된 연산을 수행할 때, 이는 exception 또는 fault로 커널 내로 트랩합니다. 
+exception.c, exception.h 파일들은 예외사항을 처리합니다. 현재 모든 예외사항들은 단지 메세지를 출력하고 프로세스를 끝내고 있습니다. 
+프로젝트2에 대한 일부 해결책은 이 파일 내에 있는 page_fault()를 수정하는 것입니다.*/
 #include "userprog/exception.h"
 #include <inttypes.h>
 #include <stdio.h>
