@@ -4,6 +4,7 @@
         "synch.h": "c",
         "filesys.h": "c",
         "file.h": "c",
-        "stdio.h": "c"
+        "stdio.h": "c",
+        "process.h": "c"
     }
 }

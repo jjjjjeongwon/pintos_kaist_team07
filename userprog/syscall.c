@@ -62,7 +62,7 @@ void syscall_init(void)
 	 * mode stack. Therefore, we masked the FLAG_FL. */
 	write_msr(MSR_SYSCALL_MASK,
 			  FLAG_IF | FLAG_TF | FLAG_DF | FLAG_IOPL | FLAG_AC | FLAG_NT);
-	lock_init(&syslock);
+	lock_init(&sys_lock);
 }
 
 /* The main system call interface */
@@ -71,7 +71,6 @@ void syscall_handler(struct intr_frame *f UNUSED)
 	// TODO: Your implementation goes here.
 	check_address(f->rsp);
 	int syscall_num = f->R.rax;
-
 	switch (syscall_num)
 	{
 	case SYS_HALT: /* Halt the operating system. */
@@ -87,7 +86,6 @@ void syscall_handler(struct intr_frame *f UNUSED)
 		f->R.rax = exec(f->R.rdi);
 		break;
 	case SYS_WAIT: /* Wait for a child process to die. */
-		printf("wait!\n");
 		f->R.rax = wait(f->R.rdi);
 		break;
 	case SYS_CREATE: /* Create a file. */
@@ -100,7 +98,7 @@ void syscall_handler(struct intr_frame *f UNUSED)
 		f->R.rax = open(f->R.rdi);
 		break;
 	case SYS_FILESIZE: /* Obtain a file's size. */
-		f->R.rax = open(f->R.rdi);
+		f->R.rax = filesize(f->R.rdi);
 		break;
 	case SYS_READ: /* Read from a file. */
 		f->R.rax = read(f->R.rdi, f->R.rsi, f->R.rdx);
@@ -118,7 +116,7 @@ void syscall_handler(struct intr_frame *f UNUSED)
 		close(f->R.rdi);
 		break;
 	default:
-		break;
+		thread_exit();
 	}
 }
 
@@ -139,7 +137,7 @@ void exit(int status)
 {
 	struct thread *cur = thread_current (); 
     /* Save exit status at process descriptor */
-    printf("%s: exit(%d)\n" , cur -> name , status);
+    printf("%s: exit(%d)\n" ,cur->name, status);
     thread_exit();
 }
 /*
@@ -147,6 +145,7 @@ void exit(int status)
 */
 bool create(const char *file, unsigned initial_size)
 {
+	check_address(file);
 	return filesys_create(file, initial_size);
 }
 
@@ -178,7 +177,9 @@ pid_t fork(const char *thread_name)
 */
 int exec(const char *cmd_line)
 {
-	return process_exec(cmd_line);
+	if(process_exec(cmd_line)){
+		return -1;
+	}
 }
 /*
 자식 프로세스 (pid) 를 기다려서 자식의 종료 상태(exit status)를 가져옵니다.
@@ -197,12 +198,13 @@ int open(const char *file)
 {
 	check_address(file);
 	struct file *open_file = filesys_open(file);
-	if(!open_file){
+	if(open_file == NULL){
 		return -1;
 	}
 	int fd = process_add_file(open_file);
-	if(fd == -1)
+	if(fd == -1){
 		file_close(open_file);
+	}
 	return fd;
 }
 /*
@@ -250,9 +252,9 @@ int read(int fd, void *buffer, unsigned size)
         {
             return -1;
         }
-        lock_acquire(&syslock);
+        lock_acquire(&sys_lock);
 		file_size = file_read(read_file, buffer, size);
-		lock_release(&syslock);
+		lock_release(&sys_lock);
     }
 	return file_size;
 }
@@ -273,9 +275,9 @@ int write(int fd, const void *buffer, unsigned size)
 		return -1;
 	}
 	else{
-		lock_acquire(&syslock);
+		lock_acquire(&sys_lock);
 		file_size = file_write(process_get_file(fd), buffer, size);
-		lock_release(&syslock);
+		lock_release(&sys_lock);
 	}
 	return file_size;
 }
@@ -316,6 +318,7 @@ void close(int fd)
 	if(close_file == NULL){
 		return -1;
 	}
+	process_close_file(fd);
 	return file_close(close_file);
 }
 /*
@@ -325,7 +328,7 @@ void close(int fd)
 void check_address(void *addr)
 {
 	struct thread *curr = thread_current();
-	if (!is_user_vaddr(addr) || addr == NULL || !is_kernel_vaddr(addr) || pml4_get_page(curr->pml4, addr) == NULL)
+	if (is_kernel_vaddr(addr) || pml4_get_page(curr->pml4,addr) == NULL)
 	{
 		exit(-1);
 	}

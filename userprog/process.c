@@ -20,6 +20,7 @@
 #include "threads/mmu.h"
 #include "threads/vaddr.h"
 #include "intrinsic.h"
+#include "threads/synch.h"
 #ifdef VM
 #include "vm/vm.h"
 #endif
@@ -31,7 +32,8 @@ static void __do_fork (void *);
 void argument_stack(char **parse, int count, void **rsp);
 int process_add_file (struct file *f);
 struct file *process_get_file(int fd);
-
+void process_close_file(int fd);
+void remove_child_process(struct thread *cp);
 /* General process initializer for initd and other process. */
 static void
 process_init (void) {
@@ -56,7 +58,9 @@ process_create_initd (const char *file_name) {
 	strlcpy (fn_copy, file_name, PGSIZE);
 
 	/* Create a new thread to execute FILE_NAME. */
-	tid = thread_create (file_name, PRI_DEFAULT, initd, fn_copy);
+	char *save_ptr;
+	char *file_title = strtok_r(file_name," ",&save_ptr);
+	tid = thread_create (file_title, PRI_DEFAULT, initd, fn_copy);
 	if (tid == TID_ERROR)
 		palloc_free_page (fn_copy);
 	return tid;
@@ -81,7 +85,6 @@ initd (void *f_name) {
 tid_t
 process_fork (const char *name, struct intr_frame *if_ UNUSED) {
 	/* Clone current thread to new thread.*/
-	printf("%s\n\n",name);
 	return thread_create (name, PRI_DEFAULT, __do_fork, thread_current ());
 }
 
@@ -97,21 +100,25 @@ duplicate_pte (uint64_t *pte, void *va, void *aux) {
 	bool writable;
 
 	/* 1. TODO: If the parent_page is kernel page, then return immediately. */
-
+	if(is_kernel_vaddr(va)){
+		return true;
+	}
 	/* 2. Resolve VA from the parent's page map level 4. */
 	parent_page = pml4_get_page (parent->pml4, va);
 
 	/* 3. TODO: Allocate new PAL_USER page for the child and set result to
 	 *    TODO: NEWPAGE. */
-
+	newpage = palloc_get_page(PAL_USER);
 	/* 4. TODO: Duplicate parent's page to the new page and
 	 *    TODO: check whether parent's page is writable or not (set WRITABLE
 	 *    TODO: according to the result). */
-
+	newpage = parent_page;
+	writable = is_writable(pte);
 	/* 5. Add new page to child's page table at address VA with WRITABLE
 	 *    permission. */
 	if (!pml4_set_page (current->pml4, va, newpage, writable)) {
 		/* 6. TODO: if fail to insert page, do error handling. */
+		return false;
 	}
 	return true;
 }
@@ -153,7 +160,7 @@ __do_fork (void *aux) {
 	 * TODO:       in include/filesys/file.h. Note that parent should not return
 	 * TODO:       from the fork() until this function successfully duplicates
 	 * TODO:       the resources of parent.*/
-
+	
 	process_init ();
 
 	/* Finally, switch to the newly created process. */
@@ -210,8 +217,6 @@ int process_exec(void *f_name)
     _if.R.rdi = count;
     _if.R.rsi = _if.rsp + 8;
 
-    hex_dump(_if.rsp, _if.rsp, USER_STACK - _if.rsp, true);
-
     palloc_free_page(file_name);
 
     /* Start switched process. */
@@ -256,6 +261,7 @@ add file to fd table
 return cur_file index
 */
 int process_add_file (struct file *f){
+
 	struct thread *cur = thread_current();
 
 	//파일 객체(struct file)를 가리키는 포인터를 File Descriptor 테이블에 추가
@@ -263,7 +269,6 @@ int process_add_file (struct file *f){
 
 	//다음 File Descriptor 값 1 증가
 	cur->next_fd++;
-
 	//추가된 파일 객체의 File Descriptor 반환
 	return cur->next_fd-1;
 }
@@ -279,7 +284,17 @@ struct file *process_get_file(int fd)
 	}
 	return cur->fdt[fd];
 }
-
+void process_close_file(int fd){
+	struct thread *cur = thread_current();
+	if(fd < FD_MIN || fd >= FD_MAX){
+		return;
+	}
+	cur->fdt[fd] = NULL;
+}
+void remove_child_process(struct thread *cp){
+	list_remove(&cp->child_elem);
+	palloc_free_page(cp);
+}
 // void argument_stack(char **parse, int count, void *rsp)
 // {
 // 	// --rsp;
@@ -328,7 +343,7 @@ process_wait (tid_t child_tid UNUSED) {
 	/* XXX: Hint) The pintos exit if process_wait (initd), we recommend you
 	 * XXX:       to add infinite loop here before
 	 * XXX:       implementing the process_wait. */
-	for(int i =0;i<10000000;i++){}
+	for(int i = 0;i<100000000;i++){}
 	return -1;
 }
 
