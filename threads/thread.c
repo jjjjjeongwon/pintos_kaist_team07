@@ -212,8 +212,13 @@ thread_create (const char *name, int priority,
 	t->tf.eflags = FLAG_IF;
 	t->exit_flag = 1;
 	t->next_fd = 2;
+	if(t->parent != NULL){
+		list_push_back(&t->parent->child_list,&t->child_elem);
+	}
 	sema_init(&t->load_sema,1);
 	sema_init(&t->exit_sema,1);
+	sema_init(&t->fork_sema,1);
+	
 	/* Add to run queue. */
 	thread_unblock (t);
 	/* compare the priorities of the currently running thread and the newly inserted one. Yield the CPU if the newly arriving thread has higher priority*/

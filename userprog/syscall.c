@@ -3,6 +3,7 @@
 #include <syscall-nr.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
+#include "threads/palloc.h"
 #include "threads/loader.h"
 #include "userprog/gdt.h"
 #include "threads/init.h"
@@ -62,7 +63,7 @@ void syscall_init(void)
 	 * mode stack. Therefore, we masked the FLAG_FL. */
 	write_msr(MSR_SYSCALL_MASK,
 			  FLAG_IF | FLAG_TF | FLAG_DF | FLAG_IOPL | FLAG_AC | FLAG_NT);
-	lock_init(&sys_lock);
+	lock_init(&filesys_lock);
 }
 
 /* The main system call interface */
@@ -168,7 +169,7 @@ THREAD_NAME이라는 이름을 가진 현재 프로세스의 복제본인 새 �
 */
 pid_t fork(const char *thread_name)
 {
-	struct thread *cur = thread_current();
+	struct thread *cur = thread_current(); 
 	return process_fork(thread_name,&cur->tf);
 }
 /*
@@ -177,9 +178,19 @@ pid_t fork(const char *thread_name)
 */
 int exec(const char *cmd_line)
 {
-	if(process_exec(cmd_line)){
+	char *fn_copy;
+	tid_t tid;
+
+	fn_copy = palloc_get_page (0);
+	if (fn_copy == NULL)
+		return TID_ERROR;
+	strlcpy (fn_copy, cmd_line, PGSIZE);
+	tid = process_exec(fn_copy);
+	if(tid == -1){
+		palloc_free_page(fn_copy);
 		return -1;
 	}
+	return tid;
 }
 /*
 자식 프로세스 (pid) 를 기다려서 자식의 종료 상태(exit status)를 가져옵니다.
@@ -188,7 +199,7 @@ int exec(const char *cmd_line)
 */
 int wait(pid_t pid)
 {
-
+	return process_wait(pid);
 }
 /*
 file(첫 번째 인자)이라는 이름을 가진 파일을 엽니다. 해당 파일이 성공적으로 열렸다면,
@@ -252,9 +263,9 @@ int read(int fd, void *buffer, unsigned size)
         {
             return -1;
         }
-        lock_acquire(&sys_lock);
+        lock_acquire(&filesys_lock);
 		file_size = file_read(read_file, buffer, size);
-		lock_release(&sys_lock);
+		lock_release(&filesys_lock);
     }
 	return file_size;
 }
@@ -275,9 +286,9 @@ int write(int fd, const void *buffer, unsigned size)
 		return -1;
 	}
 	else{
-		lock_acquire(&sys_lock);
+		lock_acquire(&filesys_lock);
 		file_size = file_write(process_get_file(fd), buffer, size);
-		lock_release(&sys_lock);
+		lock_release(&filesys_lock);
 	}
 	return file_size;
 }

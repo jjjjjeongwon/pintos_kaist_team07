@@ -109,12 +109,14 @@ struct thread {
    struct list_elem child_elem;       // 자식 스레드 리스트를 위한 elem
 
    struct thread *parent;            // 부모 스레드
-
+   struct intr_frame parent_if;
+   struct semaphore fork_sema;
    struct semaphore load_sema;
    struct semaphore exit_sema;
    
    struct file *run_file;
    int exit_flag;                  // 스레드 종료 확인을 위한 플래그
+   int exit_status;
    int load_flag;                  
    
 
