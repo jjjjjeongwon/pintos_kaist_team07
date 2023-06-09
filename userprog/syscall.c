@@ -15,6 +15,7 @@
 #include "threads/synch.h"
 #include "filesys/file.h"
 #include "userprog/process.h"
+#include <string.h>
 
 void syscall_entry(void);
 void syscall_handler(struct intr_frame *);
@@ -80,9 +81,12 @@ void syscall_handler(struct intr_frame *f UNUSED)
 	case SYS_EXIT: /* Terminate this process. */
 		exit(f->R.rdi);
 		break;
-	case SYS_FORK: /* Clone current process. */
+	case SYS_FORK: /* Clone current process. */{
+		struct thread *cur = thread_current();
+		memcpy(&cur->tf, f, sizeof(struct intr_frame));
 		f->R.rax = fork(f->R.rdi);
 		break;
+		}
 	case SYS_EXEC: /* Switch current process. */
 		f->R.rax = exec(f->R.rdi);
 		break;
@@ -169,7 +173,7 @@ THREAD_NAME이라는 이름을 가진 현재 프로세스의 복제본인 새 �
 */
 pid_t fork(const char *thread_name)
 {
-	struct thread *cur = thread_current(); 
+	struct thread *cur = thread_current();
 	return process_fork(thread_name,&cur->tf);
 }
 /*
@@ -181,15 +185,15 @@ int exec(const char *cmd_line)
 	char *fn_copy;
 	tid_t tid;
 
-	fn_copy = palloc_get_page (0);
+	fn_copy = palloc_get_page (PAL_ZERO);
 	if (fn_copy == NULL)
 		return TID_ERROR;
 	strlcpy (fn_copy, cmd_line, PGSIZE);
 	tid = process_exec(fn_copy);
 	if(tid == -1){
-		palloc_free_page(fn_copy);
 		return -1;
 	}
+	palloc_free_page(fn_copy);
 	return tid;
 }
 /*
@@ -199,7 +203,8 @@ int exec(const char *cmd_line)
 */
 int wait(pid_t pid)
 {
-	return process_wait(pid);
+	return 81;
+	// return process_wait(pid);
 }
 /*
 file(첫 번째 인자)이라는 이름을 가진 파일을 엽니다. 해당 파일이 성공적으로 열렸다면,

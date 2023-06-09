@@ -86,24 +86,25 @@ initd (void *f_name) {
  * TID_ERROR if the thread cannot be created. */
 tid_t process_fork(const char *name, struct intr_frame *if_ UNUSED)
 {
+
     // project 2 : system call
     /* Clone current thread to new thread.*/
     struct thread *cur = thread_current();
-    memcpy(&cur->parent_if, if_, sizeof(struct intr_frame));
-
+	memcpy(&thread_current()->parent_ifif, if_, sizeof(struct intr_frame));
     tid_t tid = thread_create(name, PRI_DEFAULT, __do_fork, cur);
 
-    if (tid == TID_ERROR)
-    {
-        return TID_ERROR;
-    }
+    // if (tid == TID_ERROR)
+    // {
+    //     return TID_ERROR;
+    // }
     struct thread *child = get_child_process(tid); // child_list안에서 만들어진 child thread를 찾음
-    sema_down(&child->fork_sema);                    // 자식이 메모리에 load 될때까지 기다림(blocked)
 
-    if (child->exit_status == -1)
-    {
-        return TID_ERROR;
-    }
+    sema_down(&child->load_sema);                    // 자식이 메모리에 load 될때까지 기다림(blocked)
+
+    // if (child->exit_status == -1)
+    // {
+    //     return TID_ERROR;
+    // }
     return tid;
 }
 
@@ -125,7 +126,7 @@ duplicate_pte (uint64_t *pte, void *va, void *aux) {
 	/* 2. Resolve VA from the parent's page map level 4. */
 	parent_page = pml4_get_page (parent->pml4, va);
 	if(parent_page == NULL){
-		return true;
+		return false;
 	}
 	/* 3. TODO: Allocate new PAL_USER page for the child and set result to
 	 *    TODO: NEWPAGE. */
@@ -151,18 +152,18 @@ duplicate_pte (uint64_t *pte, void *va, void *aux) {
  *       this function. */
 static void
 __do_fork (void *aux) {
+
 	struct intr_frame if_;
 	struct thread *parent = (struct thread *) aux;
 	struct thread *current = thread_current ();
 	/* TODO: somehow pass the parent_if. (i.e. process_fork()'s if_) */
 	current->parent = parent;
-	struct intr_frame *parent_if;
+	struct intr_frame *parent_if = &parent->parent_ifif;
 	bool succ = true;
-	parent_if = &parent->parent_if;
+
 	/* 1. Read the cpu context to local stack. */
 	memcpy (&if_, parent_if, sizeof (struct intr_frame));
 
-	if_.R.rax = 0;
 	/* 2. Duplicate PT */
 	current->pml4 = pml4_create();
 	if (current->pml4 == NULL)
@@ -198,30 +199,29 @@ __do_fork (void *aux) {
 			new_file = file;
         current->fdt[i] = new_file;
     }
-    current->next_fd = parent->next_fd;
-	sema_up(&current->fork_sema);
+	if_.R.rax = 0;
+    // current->next_fd = parent->next_fd;
 	process_init();
+	sema_up(&current->load_sema);
 	/* Finally, switch to the newly created process. */
 	if (succ)
 		do_iret (&if_);
 error:
 	current->exit_status = TID_ERROR;
-	sema_up(&current->fork_sema);
+	sema_up(&current->load_sema);
 	thread_exit ();
 }
 struct thread *get_child_process(int pid)
 {
 	struct thread *par = thread_current();
-	struct list_elem *current_elem = list_begin(&par->child_list);
-	struct thread *current_thread;
-	while (current_elem != list_end(&par->child_list))
-	{
-		current_thread = list_entry(current_elem, struct thread, elem);
-		if (current_thread->tid == pid)
-		{
-			return current_thread;
+	struct list_elem *current_elem;
+
+	if(list_empty(&par->child_list)) return NULL;
+
+	for(current_elem = list_front(&par->child_list);current_elem != list_tail(&par->child_list);current_elem = list_next(current_elem)){
+		if(list_entry(current_elem,struct thread,child_elem)->tid == pid){
+			return list_entry(current_elem,struct thread,child_elem);
 		}
-		current_elem = list_next(current_elem);
 	}
 	return NULL;
 }

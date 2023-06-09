@@ -200,6 +200,9 @@ thread_create (const char *name, int priority,
 	init_thread (t, name, priority); /* thread 구조체 초기화*/
 	tid = t->tid = allocate_tid (); /* tid 할당 */
 
+	struct file **new_fdt = (struct file **)palloc_get_page(PAL_ZERO);
+	t->fdt = new_fdt;
+
 	/* Call the kernel_thread if it scheduled.
 	 * Note) rdi is 1st argument, and rsi is 2nd argument. */
 	t->tf.rip = (uintptr_t) kernel_thread; /* 커널 스택 할당 */
@@ -210,17 +213,11 @@ thread_create (const char *name, int priority,
 	t->tf.ss = SEL_KDSEG;
 	t->tf.cs = SEL_KCSEG;
 	t->tf.eflags = FLAG_IF;
-	t->exit_flag = 1;
-	t->next_fd = 2;
-	if(t->parent != NULL){
-		list_push_back(&t->parent->child_list,&t->child_elem);
-	}
-	sema_init(&t->load_sema,1);
-	sema_init(&t->exit_sema,1);
-	sema_init(&t->fork_sema,1);
-	
+
 	/* Add to run queue. */
 	thread_unblock (t);
+	
+	list_push_back(&thread_current()->child_list,&t->child_elem);
 	/* compare the priorities of the currently running thread and the newly inserted one. Yield the CPU if the newly arriving thread has higher priority*/
 	if (thread_get_priority() < t->priority) {
 		thread_yield();
@@ -498,11 +495,12 @@ init_thread (struct thread *t, const char *name, int priority) {
 	t->magic = THREAD_MAGIC;
 	t->pre_priority = priority;
 	t->wait_on_lock = NULL;
+	t->exit_flag = 1;
+	t->next_fd = 2;
 	list_init(&t->list_donation);
-
-	// NOTE: For Advanced Scheduler
-	// t->nice = NICE_DEFAULT;
-	// t->recent_cpu = RECENT_CPU_DEFAULT;
+	list_init(&t->child_list);
+	sema_init(&t->load_sema,0);
+	sema_init(&t->exit_sema,0);
 }
 
 /* Chooses and returns the next thread to be scheduled.  Should
