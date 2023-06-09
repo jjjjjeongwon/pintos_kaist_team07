@@ -408,7 +408,7 @@ process_wait (tid_t child_tid UNUSED) {
 	// remove_child_process(find_child);
 	// sema_up(&find_child->exit_sema);
     // return exit_flag;
-	for(int i = 0;i<100000000;i++){}
+	// for(int i = 0;i<100000000;i++){}
 	return -1;
 }
 
