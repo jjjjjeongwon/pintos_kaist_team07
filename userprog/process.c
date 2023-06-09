@@ -93,18 +93,18 @@ tid_t process_fork(const char *name, struct intr_frame *if_ UNUSED)
 	memcpy(&thread_current()->parent_if, if_, sizeof(struct intr_frame));
     tid_t tid = thread_create(name, PRI_DEFAULT, __do_fork, cur);
 
-    // if (tid == TID_ERROR)
-    // {
-    //     return TID_ERROR;
-    // }
+    if (tid == TID_ERROR)
+    {
+        return TID_ERROR;
+    }
     struct thread *child = get_child_process(tid); // child_list안에서 만들어진 child thread를 찾음
 
     sema_down(&child->load_sema);                    // 자식이 메모리에 load 될때까지 기다림(blocked)
 
-    // if (child->exit_flag == -1)
-    // {
-    //     return TID_ERROR;
-    // }
+    if (child->exit_flag == -1)
+    {
+        return TID_ERROR;
+    }
     return tid;
 }
 
@@ -146,17 +146,12 @@ duplicate_pte (uint64_t *pte, void *va, void *aux) {
 }
 #endif
 
-/* A thread function that copies parent's execution context.
- * Hint) parent->tf does not hold the userland context of the process.
- *       That is, you are required to pass second argument of process_fork to
- *       this function. */
 static void
 __do_fork (void *aux) {
 
 	struct intr_frame if_;
 	struct thread *parent = (struct thread *) aux;
 	struct thread *current = thread_current ();
-	/* TODO: somehow pass the parent_if. (i.e. process_fork()'s if_) */
 	current->parent = parent;
 	struct intr_frame *parent_if = &parent->parent_if;
 	bool succ = true;
@@ -179,11 +174,6 @@ __do_fork (void *aux) {
 		goto error;
 #endif
 
-	/* TODO: Your code goes here.
-	 * TODO: Hint) To duplicate the file object, use `file_duplicate`
-	 * TODO:       in include/filesys/file.h. Note that parent should not return
-	 * TODO:       from the fork() until this function successfully duplicates
-	 * TODO:       the resources of parent.*/
 	if (parent->next_fd == FD_MAX)
         goto error;
 
@@ -200,7 +190,7 @@ __do_fork (void *aux) {
         current->fdt[i] = new_file;
     }
 	if_.R.rax = 0;
-    // current->next_fd = parent->next_fd;
+    current->next_fd = parent->next_fd;
 	process_init();
 	sema_up(&current->load_sema);
 	/* Finally, switch to the newly created process. */
@@ -225,8 +215,7 @@ struct thread *get_child_process(int pid)
 	}
 	return NULL;
 }
-/* Switch the current execution context to the f_name.
- * Returns -1 on fail. */
+
 /* Switch the current execution context to the f_name.
  * Returns -1 on fail. */
 int process_exec(void *f_name)
@@ -311,10 +300,7 @@ void argument_stack(char **parse, int count, void **rsp)
     (*rsp) -= 8;
     **(void ***)rsp = 0;
 }
-/*
-add file to fd table 
-return cur_file index
-*/
+
 int process_add_file (struct file *f){
 
 	struct thread *cur = thread_current();
@@ -327,10 +313,7 @@ int process_add_file (struct file *f){
 	//추가된 파일 객체의 File Descriptor 반환
 	return cur->next_fd-1;
 }
-/*
-find process using fd number 
-return fdt[fd] file
-*/
+
 struct file *process_get_file(int fd)
 {
 	struct thread *cur = thread_current();
@@ -350,39 +333,6 @@ void remove_child_process(struct thread *cp){
 	list_remove(&cp->child_elem);
 	palloc_free_page(cp);
 }
-// void argument_stack(char **parse, int count, void *rsp)
-// {
-// 	// --rsp;
-// 	/* argv의 문자열 차례로 저장 */
-// 	for (int i = count-1; i >= 0; i--)
-// 	{
-// 		for (int j = strlen(parse[i]); j >= 0; j--)
-// 		{
-// 			printf("writing %c on %p\n", parse[i][j], rsp);
-// 			rsp -= sizeof(char);
-// 			*(char *)rsp = parse[i][j];
-// 		}
-// 	}
-
-// 	/* word-align 저장 */
-// 	rsp = ((uintptr_t)rsp - 1) & ~(uintptr_t)7;
-
-// 	/* argv[argc] 0으로 저장 */
-// 	rsp -= sizeof(uintptr_t);
-// 	*(uintptr_t *)rsp = 0;
-
-// 	/* argv[0] ~ argv[argc-1]의 주소값 저장 */
-// 	for (int i = count - 1; i >= 0; i--)
-// 	{
-// 		rsp -= sizeof(uintptr_t);
-// 		*(uintptr_t *)rsp = (uintptr_t)rsp + sizeof(uintptr_t);
-// 	}
-
-// 	/* return address 저장 */
-// 	rsp -= sizeof(uintptr_t);
-// 	*(uintptr_t *)rsp = 0;
-// }
-
 
 /* Waits for thread TID to die and returns its exit status.  If
  * it was terminated by the kernel (i.e. killed due to an
@@ -408,7 +358,7 @@ process_wait (tid_t child_tid UNUSED) {
 	// remove_child_process(find_child);
 	// sema_up(&find_child->exit_sema);
     // return exit_flag;
-	// for(int i = 0;i<100000000;i++){}
+	for(int i = 0;i<100000000;i++){}
 	return -1;
 }
 
