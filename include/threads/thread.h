@@ -112,6 +112,7 @@ struct thread {
    struct intr_frame parent_if;
    struct semaphore load_sema;
    struct semaphore exit_sema;
+   struct semaphore free_sema;
    
    int exit_flag;                  // 스레드 종료 확인을 위한 플래그
    int load_flag;                  

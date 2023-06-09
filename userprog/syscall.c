@@ -141,7 +141,7 @@ void halt(void)
 void exit(int status)
 {
 	struct thread *cur = thread_current (); 
-    /* Save exit status at process descriptor */
+    cur->exit_flag = status;
     printf("%s: exit(%d)\n" ,cur->name, status);
     thread_exit();
 }
@@ -203,8 +203,8 @@ int exec(const char *cmd_line)
 */
 int wait(pid_t pid)
 {
-	return 81;
-	// return process_wait(pid);
+	// return 81;
+	return process_wait(pid);
 }
 /*
 file(첫 번째 인자)이라는 이름을 가진 파일을 엽니다. 해당 파일이 성공적으로 열렸다면,

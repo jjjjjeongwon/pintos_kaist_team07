@@ -343,40 +343,30 @@ void remove_child_process(struct thread *cp){
  *
  * This function will be implemented in problem 2-2.  For now, it
  * does nothing. */
-int
-process_wait (tid_t child_tid UNUSED) {
-	/* XXX: Hint) The pintos exit if process_wait (initd), we recommend you
-	 * XXX:       to add infinite loop here before
-	 * XXX:       implementing the process_wait. */
-	// struct thread *find_child = get_child_process(child_tid);
-	// printf("%p\n\n\n",find_child);
-	// if(find_child == NULL){
-	// 	return -1;
-	// }
-	// sema_down(&find_child->load_sema);
-	// int exit_flag = find_child->exit_flag;
-	// remove_child_process(find_child);
-	// sema_up(&find_child->exit_sema);
-    // return exit_flag;
-	for(int i = 0;i<100000000;i++){}
-	return -1;
+int process_wait(tid_t child_tid UNUSED)
+{
+	struct thread *child_thread = get_child_process(child_tid);
+	if (child_thread == NULL)
+		return -1;
+
+	sema_down(&child_thread->exit_sema);
+	int child_exit_flag = child_thread->exit_flag;
+	list_remove(&child_thread->child_elem);
+	sema_up(&child_thread->free_sema);
+
+	return child_exit_flag;
 }
 
 /* Exit the process. This function is called by thread_exit (). */
-void
-process_exit (void) {
-	struct thread *cur = thread_current ();
-	/* TODO: Your code goes here.
-	 * TODO: Implement process termination message (see
-	 * TODO: project2/process_termination.html).
-	 * TODO: We recommend you to implement process resource cleanup here. */
-	// for(int i = 0;i<40;i++){
-	// 	close(i);
-	// }
-	// file_close(cur->run_file);
-	// sema_up(&cur->load_sema);
-	// sema_down(&cur->exit_sema);
-    process_cleanup();            // pml4를 날림(이 함수를 call 한 thread의 pml4)
+void process_exit(void)
+{
+	struct thread *cur = thread_current();
+	for (int i = 2; i < 64; i++)
+		close(i);
+
+	sema_up(&cur->exit_sema);
+	sema_down(&cur->free_sema);
+	process_cleanup(); // pml4를 날림(이 함수를 call 한 thread의 pml4)
 }
 
 /* Free the current process's resources. */
