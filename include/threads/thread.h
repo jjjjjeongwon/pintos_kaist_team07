@@ -116,11 +116,8 @@ struct thread {
    
    int exit_flag;                  // 스레드 종료 확인을 위한 플래그
    int load_flag;                  
-   
 
-   // NOTE: For Advanced Scheduler 
-   int nice;
-   int recent_cpu;
+   struct file *running_file;   
 
    /* Shared between thread.c and synch.c. */
    struct list_elem elem;              /* List element. */
@@ -133,7 +130,6 @@ struct thread {
    /* Table for whole virtual memory owned by thread. */
    struct supplemental_page_table spt;
 #endif
-
    /* Owned by thread.c. */
    struct intr_frame tf;               /* Information for switching */
    unsigned magic;                     /* Detects stack overflow. */

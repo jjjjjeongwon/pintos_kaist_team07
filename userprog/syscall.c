@@ -297,6 +297,7 @@ int write(int fd, const void *buffer, unsigned size)
 	}
 	return file_size;
 }
+
 /*
 open file fd에서 읽거나 쓸 다음 바이트를 position으로 변경합니다.
 position은 파일 시작부터 바이트 단위로 표시됩니다.
