@@ -90,7 +90,7 @@ tid_t process_fork(const char *name, struct intr_frame *if_ UNUSED)
     // project 2 : system call
     /* Clone current thread to new thread.*/
     struct thread *cur = thread_current();
-	memcpy(&thread_current()->parent_ifif, if_, sizeof(struct intr_frame));
+	memcpy(&thread_current()->parent_if, if_, sizeof(struct intr_frame));
     tid_t tid = thread_create(name, PRI_DEFAULT, __do_fork, cur);
 
     // if (tid == TID_ERROR)
@@ -101,7 +101,7 @@ tid_t process_fork(const char *name, struct intr_frame *if_ UNUSED)
 
     sema_down(&child->load_sema);                    // 자식이 메모리에 load 될때까지 기다림(blocked)
 
-    // if (child->exit_status == -1)
+    // if (child->exit_flag == -1)
     // {
     //     return TID_ERROR;
     // }
@@ -158,7 +158,7 @@ __do_fork (void *aux) {
 	struct thread *current = thread_current ();
 	/* TODO: somehow pass the parent_if. (i.e. process_fork()'s if_) */
 	current->parent = parent;
-	struct intr_frame *parent_if = &parent->parent_ifif;
+	struct intr_frame *parent_if = &parent->parent_if;
 	bool succ = true;
 
 	/* 1. Read the cpu context to local stack. */
@@ -207,7 +207,7 @@ __do_fork (void *aux) {
 	if (succ)
 		do_iret (&if_);
 error:
-	current->exit_status = TID_ERROR;
+	current->exit_flag = TID_ERROR;
 	sema_up(&current->load_sema);
 	thread_exit ();
 }
@@ -404,10 +404,10 @@ process_wait (tid_t child_tid UNUSED) {
 	// 	return -1;
 	// }
 	// sema_down(&find_child->load_sema);
-	// int exit_status = find_child->exit_status;
+	// int exit_flag = find_child->exit_flag;
 	// remove_child_process(find_child);
 	// sema_up(&find_child->exit_sema);
-    // return exit_status;
+    // return exit_flag;
 	for(int i = 0;i<100000000;i++){}
 	return -1;
 }

@@ -109,12 +109,11 @@ struct thread {
    struct list_elem child_elem;       // 자식 스레드 리스트를 위한 elem
 
    struct thread *parent;            // 부모 스레드
-   struct intr_frame parent_ifif;
+   struct intr_frame parent_if;
    struct semaphore load_sema;
    struct semaphore exit_sema;
    
    int exit_flag;                  // 스레드 종료 확인을 위한 플래그
-   int exit_status;
    int load_flag;                  
    
 
@@ -138,43 +137,6 @@ struct thread {
    struct intr_frame tf;               /* Information for switching */
    unsigned magic;                     /* Detects stack overflow. */
 };
-// struct thread {
-// 	/* Owned by thread.c. */
-// 	tid_t tid;                          /* Thread identifier. */
-// 	enum thread_status status;          /* Thread state. */
-// 	char name[16];                      /* Name (for debugging purposes). */
-// 	int priority;                       /* Priority. */
-// 	int64_t wakeup_tick;
-// 	int pre_priority;                  // donation 이후 우선순위를 초기화하기 위해 초기 우선순위 값을 저장할 필드
-// 	struct lock *wait_on_lock;		   // 해당 쓰레드가 대기하고 있는 lock자료구조의 주소를 저장할 필드
-// 	struct list list_donation;         // multiple donation을 고려하기 위한 리스트
-// 	struct list_elem d_elem; //해당 리스트를 위한 elem도 추가
-
-// 	// NOTE: For Advanced Scheduler 
-// 	int nice;
-// 	int recent_cpu;
-
-// 	/* Shared between thread.c and synch.c. */
-// 	struct list_elem elem;              /* List element. */
-
-// 	struct semaphore child_sema;
-// 	struct file *fdt[64];
-// 	int next_fd;
-// 	int exit_flag;
-
-// #ifdef USERPROG
-// 	/* Owned by userprog/process.c. */
-// 	uint64_t *pml4;                     /* Page map level 4 */
-// #endif
-// #ifdef VM
-// 	/* Table for whole virtual memory owned by thread. */
-// 	struct supplemental_page_table spt;
-// #endif
-
-// 	/* Owned by thread.c. */
-// 	struct intr_frame tf;               /* Information for switching */
-// 	unsigned magic;                     /* Detects stack overflow. */
-// };
 
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
