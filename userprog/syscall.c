@@ -265,7 +265,7 @@ int read(int fd, void *buffer, unsigned size)
     {
         struct file *read_file = process_get_file(fd);
         if (read_file == NULL)
-        {
+        {	
             return -1;
         }
         lock_acquire(&filesys_lock);
@@ -310,7 +310,7 @@ void seek(int fd, unsigned position)
 	Use void file_seek(struct file *file, off_t new_pos).
 	*/	
 	struct file *seek_file = process_get_file(fd);
-	if(fd <= 2){
+	if(fd < 2){
 		return;
 	}
 	return file_seek(seek_file,position);
