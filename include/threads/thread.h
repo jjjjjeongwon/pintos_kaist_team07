@@ -31,7 +31,7 @@ typedef int tid_t;
 
 /* File descriptor*/
 #define FD_MIN 2                       /* Lowest File descriptor */
-#define FD_MAX 63                      /* Highest File descriptor */
+#define FD_MAX 127                      /* Highest File descriptor */
 
 #define STDIN_FILENO	0
 #define STDOUT_FILENO	1

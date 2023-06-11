@@ -305,7 +305,6 @@ void argument_stack(char **parse, int count, void **rsp)
 int process_add_file (struct file *f){
 
 	struct thread *cur = thread_current();
-
 	//파일 객체(struct file)를 가리키는 포인터를 File Descriptor 테이블에 추가
 	cur->fdt[cur->next_fd] = f;
 
@@ -364,6 +363,7 @@ void process_exit(void)
 	struct thread *cur = thread_current();
 	for (int i = 2; i < 64; i++)
 		close(i);
+	// palloc_free_multiple(cur->fdt,2);
 	file_close(cur->running_file);
 	sema_up(&cur->exit_sema);
 	sema_down(&cur->free_sema);
