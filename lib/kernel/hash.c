@@ -20,7 +20,8 @@ static void remove_elem (struct hash *, struct hash_elem *);
 static void rehash (struct hash *);
 
 /* Initializes hash table H to compute hash values using HASH and
-   compare hash elements using LESS, given auxiliary data AUX. */
+   compare hash elements using LESS, given auxiliary data AUX. 
+   NOTE: hash를 초기화하는 함수 */
 bool
 hash_init (struct hash *h,
 		hash_hash_func *hash, hash_less_func *less, void *aux) {
@@ -46,7 +47,9 @@ hash_init (struct hash *h,
    table H while hash_clear() is running, using any of the
    functions hash_clear(), hash_destroy(), hash_insert(),
    hash_replace(), or hash_delete(), yields undefined behavior,
-   whether done in DESTRUCTOR or elsewhere. */
+   whether done in DESTRUCTOR or elsewhere. 
+   NOTE: buckets안에 있는 list를 순회하면서 모든 요소를 삭제하는 함수
+   */
 void
 hash_clear (struct hash *h, hash_action_func *destructor) {
 	size_t i;
@@ -76,7 +79,8 @@ hash_clear (struct hash *h, hash_action_func *destructor) {
    any of the functions hash_clear(), hash_destroy(),
    hash_insert(), hash_replace(), or hash_delete(), yields
    undefined behavior, whether done in DESTRUCTOR or
-   elsewhere. */
+   elsewhere. 
+   NOTE: hash에서 hash_clear를 거친 후 buckets의 메모리를 반환함으로서 hash를 파괴하는 함수 */
 void
 hash_destroy (struct hash *h, hash_action_func *destructor) {
 	if (destructor != NULL)
@@ -87,7 +91,8 @@ hash_destroy (struct hash *h, hash_action_func *destructor) {
 /* Inserts NEW into hash table H and returns a null pointer, if
    no equal element is already in the table.
    If an equal element is already in the table, returns it
-   without inserting NEW. */
+   without inserting NEW.
+   NOTE: hash에 hash_elem을 알맞게 삽입해주는 함수 (cake를 hash에 넣겠다!) */
 struct hash_elem *
 hash_insert (struct hash *h, struct hash_elem *new) {
 	struct list *bucket = find_bucket (h, new);
@@ -102,7 +107,8 @@ hash_insert (struct hash *h, struct hash_elem *new) {
 }
 
 /* Inserts NEW into hash table H, replacing any equal element
-   already in the table, which is returned. */
+   already in the table, which is returned. 
+   NOTE: 기존에 있던 요소를 새요소로 대체하는 함수(이미 cake가 있었다면, like가 들어왔을 때 like로 바꾼다.)*/
 struct hash_elem *
 hash_replace (struct hash *h, struct hash_elem *new) {
 	struct list *bucket = find_bucket (h, new);
@@ -118,7 +124,8 @@ hash_replace (struct hash *h, struct hash_elem *new) {
 }
 
 /* Finds and returns an element equal to E in hash table H, or a
-   null pointer if no equal element exists in the table. */
+   null pointer if no equal element exists in the table. 
+   NOTE: (cake가 hash안에 있는지 없는지 확인하는 함수) */
 struct hash_elem *
 hash_find (struct hash *h, struct hash_elem *e) {
 	return find_elem (h, find_bucket (h, e), e);
@@ -130,7 +137,8 @@ hash_find (struct hash *h, struct hash_elem *e) {
 
    If the elements of the hash table are dynamically allocated,
    or own resources that are, then it is the caller's
-   responsibility to deallocate them. */
+   responsibility to deallocate them. 
+   NOTE: hash_elem을 bucket에서 삭제하는 함수*/
 struct hash_elem *
 hash_delete (struct hash *h, struct hash_elem *e) {
 	struct hash_elem *found = find_elem (h, find_bucket (h, e), e);
@@ -180,7 +188,8 @@ hash_apply (struct hash *h, hash_action_func *action) {
    Modifying hash table H during iteration, using any of the
    functions hash_clear(), hash_destroy(), hash_insert(),
    hash_replace(), or hash_delete(), invalidates all
-   iterators. */
+   iterators. 
+   NOTE: bucket과 buckets의 차이를 아잘모*/
 void
 hash_first (struct hash_iterator *i, struct hash *h) {
 	ASSERT (i != NULL);
@@ -198,7 +207,8 @@ hash_first (struct hash_iterator *i, struct hash *h) {
    Modifying a hash table H during iteration, using any of the
    functions hash_clear(), hash_destroy(), hash_insert(),
    hash_replace(), or hash_delete(), invalidates all
-   iterators. */
+   iterators. 
+   NOTE: 아잘모*/
 struct hash_elem *
 hash_next (struct hash_iterator *i) {
 	ASSERT (i != NULL);
