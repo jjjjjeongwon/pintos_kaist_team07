@@ -203,7 +203,6 @@ int exec(const char *cmd_line)
 */
 int wait(pid_t pid)
 {
-	// return 81;
 	return process_wait(pid);
 }
 /*
@@ -228,7 +227,6 @@ fd(첫 번째 인자)로서 열려 있는 파일의 크기가 몇 바이트인�
 */
 int filesize(int fd)
 {
-
 	struct file *find_file = process_get_file(fd);
 	if(find_file == NULL)
 		return -1;

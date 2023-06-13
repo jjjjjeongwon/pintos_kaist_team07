@@ -307,7 +307,6 @@ int process_add_file (struct file *f){
 	struct thread *cur = thread_current();
 	//파일 객체(struct file)를 가리키는 포인터를 File Descriptor 테이블에 추가
 	cur->fdt[cur->next_fd] = f;
-
 	//다음 File Descriptor 값 1 증가
 	cur->next_fd++;
 	//추가된 파일 객체의 File Descriptor 반환
