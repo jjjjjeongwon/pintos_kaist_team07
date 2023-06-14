@@ -20,8 +20,8 @@ vm_init (void) {
 }
 
 static unsigned vm_hash_func(const struct hash_elem *e, void *aux){
-	//NOTE: hashing하는 함수
-	return hash_int(hash_entry(e, struct page, elem)->va);	
+	const struct page *p = hash_entry(e, struct page, elem);
+	return hash_bytes(&p->va, &p->elem);
 }
 
 static bool vm_less_func(const struct hash_elem *a, const struct hash_elem *b){

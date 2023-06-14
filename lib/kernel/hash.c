@@ -267,7 +267,7 @@ hash_bytes (const void *buf_, size_t size) {
 	uint64_t hash;
 
 	ASSERT (buf != NULL);
-
+6 
 	hash = FNV_64_BASIS;
 	while (size-- > 0)
 		hash = (hash * FNV_64_PRIME) ^ *buf++;
@@ -290,7 +290,8 @@ hash_string (const char *s_) {
 	return hash;
 }
 
-/* Returns a hash of integer I. */
+/* Returns a hash of integer I. 
+	NOTE: i를 해싱한 값을 반환한다. */
 uint64_t
 hash_int (int i) {
 	return hash_bytes (&i, sizeof i);
