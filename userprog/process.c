@@ -248,6 +248,8 @@ int process_exec(void *f_name)
         count++;
     }
 
+	vm_init();
+
     /* And then load the binary */
 	success = load(file_name, &_if);
 

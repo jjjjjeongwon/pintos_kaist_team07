@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include "threads/interrupt.h"
 #include "threads/synch.h"
+#include <hash.h>
 #ifdef VM
 #include "vm/vm.h"
 #endif
@@ -122,6 +123,7 @@ struct thread {
    /* Shared between thread.c and synch.c. */
    struct list_elem elem;              /* List element. */
 
+
 #ifdef USERPROG
    /* Owned by userprog/process.c. */
    uint64_t *pml4;                     /* Page map level 4 */
@@ -133,6 +135,7 @@ struct thread {
    /* Owned by thread.c. */
    struct intr_frame tf;               /* Information for switching */
    unsigned magic;                     /* Detects stack overflow. */
+   
 };
 
 /* If false (default), use round-robin scheduler.

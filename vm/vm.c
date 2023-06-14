@@ -3,6 +3,7 @@
 #include "threads/malloc.h"
 #include "vm/vm.h"
 #include "vm/inspect.h"
+#include "threads/vaddr.h"
 
 /* Initializes the virtual memory subsystem by invoking each subsystem's
  * intialize codes. */
@@ -16,6 +17,18 @@ vm_init (void) {
 	register_inspect_intr ();
 	/* DO NOT MODIFY UPPER LINES. */
 	/* TODO: Your code goes here. */
+}
+
+static unsigned vm_hash_func(const struct hash_elem *e, void *aux){
+	//NOTE: hashing하는 함수
+	return hash_int(hash_entry(e, struct page, elem)->va);	
+}
+
+static bool vm_less_func(const struct hash_elem *a, const struct hash_elem *b){
+	int a = hash_entry(a, struct page, elem)->va;
+	int b = hash_entry(b, struct page, elem)->va;
+
+	return b > a;
 }
 
 /* Get the type of the page. This function is useful if you want to know the
@@ -64,8 +77,18 @@ err:
 struct page *
 spt_find_page (struct supplemental_page_table *spt UNUSED, void *va UNUSED) {
 	struct page *page = NULL;
+	struct page *page_m = malloc;
+	page_m -> va = pg_round_down(va) ;
+	hash_find(&spt->vm, &page_m->elem);
 	/* TODO: Fill this function. */
-
+	// 인자로 받은 va를 round_down을 써서 페이지번호(주소) 가져오기
+	// va를 써서 페이지로 확장
+	// 그 페이지에 있는 hash_elem값을 가져온다.
+	// hash_find 함수로 spt에 있는지 확인하고 hash_elem 반환
+	// 그 hash_elem으로 entry써서 page 얻어오기
+	hash_find(&spt->vm, pg_round_down(va));
+	//FIXME: virtual address로 page에 접근하는 방식 고민중
+	// hash_entry(hash_find(&spt->vm, pg_round_down(va)),)
 	return page;
 }
 
@@ -73,15 +96,18 @@ spt_find_page (struct supplemental_page_table *spt UNUSED, void *va UNUSED) {
 bool
 spt_insert_page (struct supplemental_page_table *spt UNUSED,
 		struct page *page UNUSED) {
-	int succ = false;
 	/* TODO: Fill this function. */
-
-	return succ;
+	if (hash_insert(&spt->vm, &page->elem) == &page->elem){
+		return true;
+	}
+	return false;
 }
 
 void
 spt_remove_page (struct supplemental_page_table *spt, struct page *page) {
+	// FIXME: destroy의 정의가 확실하지 않아 hash_delete()함수 사용 고려중
 	vm_dealloc_page (page);
+
 	return true;
 }
 
@@ -143,7 +169,7 @@ vm_try_handle_fault (struct intr_frame *f UNUSED, void *addr UNUSED,
 /* Free the page.
  * DO NOT MODIFY THIS FUNCTION. */
 void
-vm_dealloc_page (struct page *page) {
+vm_dealloc_page (struct page *page) {	
 	destroy (page);
 	free (page);
 }
@@ -174,6 +200,7 @@ vm_do_claim_page (struct page *page) {
 /* Initialize new supplemental page table */
 void
 supplemental_page_table_init (struct supplemental_page_table *spt UNUSED) {
+	hash_init(&spt->vm, vm_hash_func, vm_less_func, NULL);
 }
 
 /* Copy supplemental page table from src to dst */
@@ -186,5 +213,8 @@ supplemental_page_table_copy (struct supplemental_page_table *dst UNUSED,
 void
 supplemental_page_table_kill (struct supplemental_page_table *spt UNUSED) {
 	/* TODO: Destroy all the supplemental_page_table hold by thread and
-	 * TODO: writeback all the modified contents to the storage. */
+	 * TODO: writeback all the modified contents to the storage. 
+	 * NOTE: 두 번째 TODO는 swap에서 사용하는게 아닐까? 
+	 *  */
+	hash_destroy(&spt->vm, NULL);
 }
