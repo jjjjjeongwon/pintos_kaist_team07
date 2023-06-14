@@ -360,9 +360,9 @@ int process_wait(tid_t child_tid UNUSED)
 void process_exit(void)
 {
 	struct thread *cur = thread_current();
-	for (int i = 2; i < 64; i++)
+	for (int i = 2; i < 128; i++)
 		close(i);
-	// palloc_free_multiple(cur->fdt,2);
+	palloc_free_multiple(cur->fdt,3);
 	file_close(cur->running_file);
 	sema_up(&cur->exit_sema);
 	sema_down(&cur->free_sema);
