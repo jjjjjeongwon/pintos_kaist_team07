@@ -25,10 +25,10 @@ static unsigned vm_hash_func(const struct hash_elem *e, void *aux){
 }
 
 static bool vm_less_func(const struct hash_elem *a, const struct hash_elem *b){
-	int a = hash_entry(a, struct page, elem)->va;
-	int b = hash_entry(b, struct page, elem)->va;
+	int a_va = hash_entry(a, struct page, elem)->va;
+	int b_va = hash_entry(b, struct page, elem)->va;
 
-	return b > a;
+	return b_va > a_va;
 }
 
 /* Get the type of the page. This function is useful if you want to know the
@@ -76,20 +76,12 @@ err:
 /* Find VA from spt and return page. On error, return NULL. */
 struct page *
 spt_find_page (struct supplemental_page_table *spt UNUSED, void *va UNUSED) {
-	struct page *page = NULL;
-	struct page *page_m = malloc;
-	page_m -> va = pg_round_down(va) ;
-	hash_find(&spt->vm, &page_m->elem);
-	/* TODO: Fill this function. */
-	// 인자로 받은 va를 round_down을 써서 페이지번호(주소) 가져오기
-	// va를 써서 페이지로 확장
-	// 그 페이지에 있는 hash_elem값을 가져온다.
-	// hash_find 함수로 spt에 있는지 확인하고 hash_elem 반환
-	// 그 hash_elem으로 entry써서 page 얻어오기
-	hash_find(&spt->vm, pg_round_down(va));
-	//FIXME: virtual address로 page에 접근하는 방식 고민중
-	// hash_entry(hash_find(&spt->vm, pg_round_down(va)),)
-	return page;
+	struct page p;
+	struct hash_elem *e;
+	
+	p.va = va;
+	e = hash_find(&spt, &p.elem);
+	return e != NULL ? hash_entry(e, struct page, elem) : NULL;
 }
 
 /* Insert PAGE into spt with validation. */
