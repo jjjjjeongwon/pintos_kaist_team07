@@ -88,8 +88,10 @@ vm_alloc_page_with_initializer (enum vm_type type, void *upage, bool writable,
 		
 		switch (type){
 			case VM_FILE:
+				// NOTE: init 인자가 이것인지 확실하지 않음
 				uninit_new(p, upage, vm_file_init, VM_FILE, aux, file_backed_initializer);
 			case VM_ANON:
+				// NOTE: init 인자가 이것인지 확실하지 않음
 				uninit_new(p, upage, vm_anon_init, VM_ANON, aux, anon_initializer);
 		} 
 
