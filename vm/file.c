@@ -17,6 +17,7 @@ static const struct page_operations file_ops = {
 /* The initializer of file vm */
 void
 vm_file_init (void) {
+	// FIXME: 지금으로썬 이 함수에 뭘 넣어줘야 할지 아잘모
 }
 
 /* Initialize the file backed page */

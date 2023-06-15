@@ -57,24 +57,44 @@ static struct frame *vm_get_victim (void);
 static bool vm_do_claim_page (struct page *page);
 static struct frame *vm_evict_frame (void);
 
+
+// 우리에게 3가지 타입의 페이지가 있기 때문에, 각 페이지 타입별로 초기화 루틴이 다릅니다. 아래의 섹션에서 다시 설명할것이니, 여기서는 high-level 관점에서 페이지 초기화 과정이 어떻게 되는지 설명하고자 합니다.
+// 우선 커널이 새로운 페이지를 달라는 요청을 받으면, vm_alloc_page_with_initializer 가 호출됩니다. 
+// 이 함수는 페이지 구조체를 할당하고 페이지 타입에 맞는 적절한 초기화 함수를 세팅함으로써 새로운 페이지를 초기화 합니다. 
+// 그리고 유저 프로그램으로 제어권을 넘깁니다. 
+// 유저 프로그램이 실행될 때, 지연 로딩으로 인해 콘텐츠가 아직 로드되지 않은 페이지에 접근하게 되면 페이지 폴트가 일어나게 됩니다. 
+// 이 페이지 폴트를 처리하는 과정에서 uninit_initialize 을 호출하고 이전에 당신이 세팅해 놓은 초기화 함수를 호출합니다. 
+// 익명 페이지를 위한 초기화 함수는 anon_initializer 이고, 파일 기반 페이지를 위한 초기화 함수는 file_backed_initializer 입니다.
+//
 /* Create the pending page object with initializer. If you want to create a
  * page, do not create it directly and make it through this function or
  * `vm_alloc_page`. */
 bool
 vm_alloc_page_with_initializer (enum vm_type type, void *upage, bool writable,
 		vm_initializer *init, void *aux) {
-
+			
 	ASSERT (VM_TYPE(type) != VM_UNINIT)
 
 	struct supplemental_page_table *spt = &thread_current ()->spt;
 
 	/* Check wheter the upage is already occupied or not. */
+	
 	if (spt_find_page (spt, upage) == NULL) {
 		/* TODO: Create the page, fetch the initialier according to the VM type,
 		 * TODO: and then create "uninit" page struct by calling uninit_new. You
 		 * TODO: should modify the field after calling the uninit_new. */
+		struct page *p;
+		p->va = upage;
+		
+		switch (type){
+			case VM_FILE:
+				uninit_new(p, upage, vm_file_init, VM_FILE, aux, file_backed_initializer);
+			case VM_ANON:
+				uninit_new(p, upage, vm_anon_init, VM_ANON, aux, anon_initializer);
+		} 
 
 		/* TODO: Insert the page into the spt. */
+		hash_insert(&spt->vm, &p->elem);
 	}
 err:
 	return false;
