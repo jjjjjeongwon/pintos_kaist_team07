@@ -108,7 +108,6 @@ sema_try_down (struct semaphore *sema) {
    and wakes up one thread of those waiting for SEMA, if any.
 
    This function may be called from an interrupt handler. */
-// FIXME: 세마포어 해제 후 priority preemption 기능 추가
 void
 sema_up (struct semaphore *sema) {
 	enum intr_level old_level;

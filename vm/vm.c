@@ -4,6 +4,13 @@
 #include "vm/vm.h"
 #include "vm/inspect.h"
 #include "threads/vaddr.h"
+// NOTE: 임시 선언
+#include "threads/palloc.h"
+#include "threads/mmu.h"
+#include "userprog/process.h"
+
+// NOTE: 임시 선언
+static bool install_page (void *upage, void *kpage, bool writable);
 
 /* Initializes the virtual memory subsystem by invoking each subsystem's
  * intialize codes. */
@@ -128,8 +135,14 @@ vm_evict_frame (void) {
  * space.*/
 static struct frame *
 vm_get_frame (void) {
-	struct frame *frame = NULL;
 	/* TODO: Fill this function. */
+	struct frame *frame = palloc_get_page(PAL_ZERO);
+	if (frame == NULL) {
+		PANIC ("todo");
+	}
+	struct page *p;
+	frame->kva = NULL;
+	frame->page = p; 
 
 	ASSERT (frame != NULL);
 	ASSERT (frame->page == NULL);
@@ -169,8 +182,12 @@ vm_dealloc_page (struct page *page) {
 /* Claim the page that allocate on VA. */
 bool
 vm_claim_page (void *va UNUSED) {
-	struct page *page = NULL;
 	/* TODO: Fill this function */
+	struct thread *curr = thread_current();
+	struct page *page = spt_find_page(&curr->spt, va);
+	if (page == NULL) {
+		PANIC ("can't find page in spt");
+	}
 
 	return vm_do_claim_page (page);
 }
@@ -185,8 +202,12 @@ vm_do_claim_page (struct page *page) {
 	page->frame = frame;
 
 	/* TODO: Insert page table entry to map page's VA to frame's PA. */
-
-	return swap_in (page, frame->kva);
+	if(install_page(page->va, frame->kva, false) == false) {
+		// FIXME: 추후 swapping 구현 시 확인할 것!!!!
+		// return swap_in (page, frame->kva);
+		return false;
+	}
+	return true;
 }
 
 /* Initialize new supplemental page table */
@@ -209,4 +230,14 @@ supplemental_page_table_kill (struct supplemental_page_table *spt UNUSED) {
 	 * NOTE: 두 번째 TODO는 swap에서 사용하는게 아닐까? 
 	 *  */
 	hash_destroy(&spt->vm, NULL);
+}
+
+static bool
+install_page (void *upage, void *kpage, bool writable) {
+	struct thread *t = thread_current ();
+
+	/* Verify that there's not already a page at that virtual
+	 * address, then map our page there. */
+	return (pml4_get_page (t->pml4, upage) == NULL
+			&& pml4_set_page (t->pml4, upage, kpage, writable));
 }
