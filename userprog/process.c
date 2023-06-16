@@ -24,8 +24,8 @@
 #include "threads/synch.h"
 
 // NOTE: 임시수정
-#ifdef VM
 #include "vm/vm.h"
+#ifdef VM
 #endif
 
 static void process_cleanup (void);
@@ -250,7 +250,7 @@ int process_exec(void *f_name)
         count++;
     }
 
-	vm_init();
+	// vm_init();
 
     /* And then load the binary */
 	success = load(file_name, &_if);
@@ -636,7 +636,16 @@ validate_segment (const struct Phdr *phdr, struct file *file) {
  * outside of #ifndef macro. */
 
 /* load() helpers. */
-static bool install_page (void *upage, void *kpage, bool writable);
+static bool
+install_page (void *upage, void *kpage, bool writable) {
+	struct thread *t = thread_current ();
+
+	/* Verify that there's not already a page at that virtual
+	 * address, then map our page there. */
+	return (pml4_get_page (t->pml4, upage) == NULL
+			&& pml4_set_page (t->pml4, upage, kpage, writable));
+}
+
 
 /* Loads a segment starting at offset OFS in FILE at address
  * UPAGE.  In total, READ_BYTES + ZERO_BYTES bytes of virtual
@@ -786,7 +795,6 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		/* TODO: Set up aux to pass information to the lazy_load_segment. */
 		struct lazy_load_data lazy_load_data;
 		lazy_load_data.lazy_load_file = file;
-		lazy_load_data.ofs = ofs;
 		lazy_load_data.page_read_bytes = page_read_bytes;
 		lazy_load_data.page_zero_bytes = page_zero_bytes;
 

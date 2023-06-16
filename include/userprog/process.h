@@ -19,8 +19,6 @@ struct lazy_load_data {
     size_t page_read_bytes;
     size_t page_zero_bytes;
     struct file *lazy_load_file;
-    off_t ofs;
-
     };
 
 

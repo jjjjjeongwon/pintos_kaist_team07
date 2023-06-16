@@ -90,9 +90,11 @@ vm_alloc_page_with_initializer (enum vm_type type, void *upage, bool writable,
 			case VM_FILE:
 				// NOTE: init 인자가 이것인지 확실하지 않음
 				uninit_new(p, upage, vm_file_init, VM_FILE, aux, file_backed_initializer);
+				break;
 			case VM_ANON:
 				// NOTE: init 인자가 이것인지 확실하지 않음
 				uninit_new(p, upage, vm_anon_init, VM_ANON, aux, anon_initializer);
+				break;
 		} 
 
 		/* TODO: Insert the page into the spt. */
@@ -158,13 +160,15 @@ vm_evict_frame (void) {
 static struct frame *
 vm_get_frame (void) {
 	/* TODO: Fill this function. */
-	struct frame *frame = palloc_get_page(PAL_ZERO);
+	struct frame *frame;
+	struct page *p;
+
+	frame->kva = palloc_get_page(PAL_ZERO);;
+	frame->page = NULL; 
+
 	if (frame == NULL) {
 		PANIC ("todo");
 	}
-	struct page *p;
-	frame->kva = NULL;
-	frame->page = p; 
 
 	ASSERT (frame != NULL);
 	ASSERT (frame->page == NULL);
@@ -186,10 +190,21 @@ bool
 vm_try_handle_fault (struct intr_frame *f UNUSED, void *addr UNUSED,
 		bool user UNUSED, bool write UNUSED, bool not_present UNUSED) {
 	struct supplemental_page_table *spt UNUSED = &thread_current ()->spt;
-	struct page *page = NULL;
+	struct page *page = vm_alloc_page();
 	/* TODO: Validate the fault */
 	/* TODO: Your code goes here */
+	printf("addr occured PF = %p\n", addr);
+	if (user) {
+		printf("PF type: user! doing nothing for now\n");
+	}
+	if (write) {
 
+		printf("PF type: write! exit thread\n");
+
+	}
+	if (not_present) {
+		printf("PF type: not_present! call vm_do_claim_page\n");
+	}
 	return vm_do_claim_page (page);
 }
 
