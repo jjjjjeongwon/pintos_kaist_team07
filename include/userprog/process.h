@@ -21,7 +21,7 @@ struct lazy_load_data {
     struct file *lazy_load_file;
     off_t ofs;
 
-    }
+    };
 
 
 #endif /* userprog/process.h */

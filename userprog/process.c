@@ -746,7 +746,7 @@ lazy_load_segment (struct page *page, void *aux) {
 	struct file *file = ll_data->lazy_load_file;
 	size_t page_read_bytes = ll_data->page_read_bytes;
 	size_t page_zero_bytes = ll_data->page_zero_bytes;
-	
+
 	if (file_read (file, kpage, page_read_bytes) != (int) page_read_bytes) {
 			palloc_free_page (kpage);
 			return false;
@@ -806,6 +806,8 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 /* Create a PAGE of stack at the USER_STACK. Return true on success. */
 static bool
 setup_stack (struct intr_frame *if_) {
+	// struct page *upage; 
+	uint8_t *kpage;
 	bool success = false;
 	void *stack_bottom = (void *) (((uint8_t *) USER_STACK) - PGSIZE);
 
@@ -813,7 +815,17 @@ setup_stack (struct intr_frame *if_) {
 	 * TODO: If success, set the rsp accordingly.
 	 * TODO: You should mark the page is stack. */
 	/* TODO: Your code goes here */
-
+	// NOTE: 당신은 vm/vm.h의 vm_type에 있는 
+	// 보조 marker(예 - VM_MARKER_0)들을 페이지를 마킹하는데 사용할 수 있습니다.
+	vm_alloc_page(VM_ANON, USER_STACK, false);
+	kpage = palloc_get_page (PAL_USER | PAL_ZERO);
+	if (kpage != NULL) {
+		success = install_page (stack_bottom, kpage, true);
+		if (success)
+			if_->rsp = USER_STACK;
+		else
+			palloc_free_page (kpage);
+	}
 	return success;
 }
 #endif /* VM */
