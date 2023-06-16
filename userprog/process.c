@@ -22,8 +22,10 @@
 #include "threads/vaddr.h"
 #include "intrinsic.h"
 #include "threads/synch.h"
-#ifdef VM
+
+// NOTE: 임시수정
 #include "vm/vm.h"
+#ifdef VM
 #endif
 
 static void process_cleanup (void);
@@ -727,16 +729,29 @@ install_page (void *upage, void *kpage, bool writable) {
 	return (pml4_get_page (t->pml4, upage) == NULL
 			&& pml4_set_page (t->pml4, upage, kpage, writable));
 }
-#else
+
+// NOTE: 임시 주석 처리
+// #else
 /* From here, codes will be used after project 3.
  * If you want to implement the function for only project 2, implement it on the
  * upper block. */
 
 static bool
 lazy_load_segment (struct page *page, void *aux) {
+	struct lazy_load_data *ll_data = (struct lazy_load_data *) aux;
 	/* TODO: Load the segment from the file */
 	/* TODO: This called when the first page fault occurs on address VA. */
 	/* TODO: VA is available when calling this function. */
+	uint8_t *kpage = page->frame->kva;
+	struct file *file = ll_data->lazy_load_file;
+	size_t page_read_bytes = ll_data->page_read_bytes;
+	size_t page_zero_bytes = ll_data->page_zero_bytes;
+	
+	if (file_read (file, kpage, page_read_bytes) != (int) page_read_bytes) {
+			palloc_free_page (kpage);
+			return false;
+		}
+		memset (kpage + page_read_bytes, 0, page_zero_bytes);
 }
 
 /* Loads a segment starting at offset OFS in FILE at address
@@ -767,8 +782,15 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
 		size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
+
 		/* TODO: Set up aux to pass information to the lazy_load_segment. */
-		void *aux = NULL;
+		struct lazy_load_data lazy_load_data;
+		lazy_load_data.lazy_load_file = file;
+		lazy_load_data.ofs = ofs;
+		lazy_load_data.page_read_bytes = page_read_bytes;
+		lazy_load_data.page_zero_bytes = page_zero_bytes;
+
+		void *aux = &lazy_load_data;
 		if (!vm_alloc_page_with_initializer (VM_ANON, upage,
 					writable, lazy_load_segment, aux))
 			return false;
