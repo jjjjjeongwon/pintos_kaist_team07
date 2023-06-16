@@ -24,8 +24,8 @@
 #include "threads/synch.h"
 
 // NOTE: 임시수정
-#include "vm/vm.h"
 #ifdef VM
+#include "vm/vm.h"
 #endif
 
 static void process_cleanup (void);
@@ -720,6 +720,8 @@ setup_stack (struct intr_frame *if_) {
  * with palloc_get_page().
  * Returns true on success, false if UPAGE is already mapped or
  * if memory allocation fails. */
+// NOTE: 임시 주석 처리
+#else
 static bool
 install_page (void *upage, void *kpage, bool writable) {
 	struct thread *t = thread_current ();
@@ -730,8 +732,6 @@ install_page (void *upage, void *kpage, bool writable) {
 			&& pml4_set_page (t->pml4, upage, kpage, writable));
 }
 
-// NOTE: 임시 주석 처리
-// #else
 /* From here, codes will be used after project 3.
  * If you want to implement the function for only project 2, implement it on the
  * upper block. */
