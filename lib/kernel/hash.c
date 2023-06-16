@@ -266,8 +266,7 @@ hash_bytes (const void *buf_, size_t size) {
 	const unsigned char *buf = buf_;
 	uint64_t hash;
 
-	ASSERT (buf != NULL);
-6 
+	ASSERT (buf != NULL); 
 	hash = FNV_64_BASIS;
 	while (size-- > 0)
 		hash = (hash * FNV_64_PRIME) ^ *buf++;
