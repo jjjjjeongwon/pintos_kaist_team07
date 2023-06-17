@@ -90,9 +90,11 @@ vm_alloc_page_with_initializer (enum vm_type type, void *upage, bool writable,
 			case VM_FILE:
 				// NOTE: init 인자가 이것인지 확실하지 않음
 				uninit_new(p, upage, vm_file_init, VM_FILE, aux, file_backed_initializer);
+				break;
 			case VM_ANON:
 				// NOTE: init 인자가 이것인지 확실하지 않음
 				uninit_new(p, upage, vm_anon_init, VM_ANON, aux, anon_initializer);
+				break;
 		} 
 
 		/* TODO: Insert the page into the spt. */
@@ -158,13 +160,12 @@ vm_evict_frame (void) {
 static struct frame *
 vm_get_frame (void) {
 	/* TODO: Fill this function. */
-	struct frame *frame = palloc_get_page(PAL_ZERO);
+	struct frame *frame;
 	if (frame == NULL) {
 		PANIC ("todo");
 	}
-	struct page *p;
-	frame->kva = NULL;
-	frame->page = p; 
+	frame->kva = palloc_get_page(PAL_ZERO);
+	frame->page = NULL; 
 
 	ASSERT (frame != NULL);
 	ASSERT (frame->page == NULL);

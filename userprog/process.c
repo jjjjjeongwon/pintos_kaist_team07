@@ -250,8 +250,6 @@ int process_exec(void *f_name)
         count++;
     }
 
-	vm_init();
-
     /* And then load the binary */
 	success = load(file_name, &_if);
 
@@ -806,8 +804,6 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 /* Create a PAGE of stack at the USER_STACK. Return true on success. */
 static bool
 setup_stack (struct intr_frame *if_) {
-	// struct page *upage; 
-	uint8_t *kpage;
 	bool success = false;
 	void *stack_bottom = (void *) (((uint8_t *) USER_STACK) - PGSIZE);
 
@@ -817,14 +813,17 @@ setup_stack (struct intr_frame *if_) {
 	/* TODO: Your code goes here */
 	// NOTE: 당신은 vm/vm.h의 vm_type에 있는 
 	// 보조 marker(예 - VM_MARKER_0)들을 페이지를 마킹하는데 사용할 수 있습니다.
-	vm_alloc_page(VM_ANON, USER_STACK, false);
-	kpage = palloc_get_page (PAL_USER | PAL_ZERO);
-	if (kpage != NULL) {
-		success = install_page (stack_bottom, kpage, true);
-		if (success)
-			if_->rsp = USER_STACK;
-		else
-			palloc_free_page (kpage);
+	vm_alloc_page(VM_ANON, stack_bottom, false);
+	success = vm_claim_page(stack_bottom);
+	if (success)
+		if_->rsp = USER_STACK;
+	else {
+		struct thread *curr = thread_current();
+		struct page *del_page = spt_find_page(&curr->spt, stack_bottom);
+		if (del_page != NULL) {
+			palloc_free_page(del_page->frame->kva);
+			spt_remove_page(&curr->spt, del_page);
+		}
 	}
 	return success;
 }

@@ -254,8 +254,7 @@ hash_empty (struct hash *h) {
 	return h->elem_cnt == 0;
 }
 
-/* Fowler-Noll-Vo hash constants, for 32-bit word sizes.
-	NOTE: 여기부턴 모르겠다 얘들아.. */
+/* Fowler-Noll-Vo hash constants, for 32-bit word sizes. */
 #define FNV_64_PRIME 0x00000100000001B3UL
 #define FNV_64_BASIS 0xcbf29ce484222325UL
 
@@ -266,8 +265,7 @@ hash_bytes (const void *buf_, size_t size) {
 	const unsigned char *buf = buf_;
 	uint64_t hash;
 
-	ASSERT (buf != NULL);
-6 
+	ASSERT (buf != NULL); 
 	hash = FNV_64_BASIS;
 	while (size-- > 0)
 		hash = (hash * FNV_64_PRIME) ^ *buf++;
