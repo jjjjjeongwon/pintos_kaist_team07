@@ -4,12 +4,10 @@
 #include "vm/vm.h"
 #include "vm/inspect.h"
 #include "threads/vaddr.h"
-// NOTE: 임시 선언
 #include "threads/palloc.h"
 #include "threads/mmu.h"
 #include "userprog/process.h"
 
-// NOTE: 임시 선언
 static bool install_page (void *upage, void *kpage, bool writable);
 
 /* Initializes the virtual memory subsystem by invoking each subsystem's
@@ -187,10 +185,15 @@ bool
 vm_try_handle_fault (struct intr_frame *f UNUSED, void *addr UNUSED,
 		bool user UNUSED, bool write UNUSED, bool not_present UNUSED) {
 	struct supplemental_page_table *spt UNUSED = &thread_current ()->spt;
-	struct page *page = NULL;
+	struct page *page = spt_find_page(spt, addr);
+	if (page == NULL) {
+		printf("ERROR: can't find matched page with VA addr");
+		return false;
+	}
+	return install_page(page->va, page->frame->kva, true);
+
 	/* TODO: Validate the fault */
 	/* TODO: Your code goes here */
-
 	return vm_do_claim_page (page);
 }
 

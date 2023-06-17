@@ -23,9 +23,9 @@
 #include "intrinsic.h"
 #include "threads/synch.h"
 
-// NOTE: 임시수정
-#include "vm/vm.h"
+// TEST: 임시수정
 #ifdef VM
+#include "vm/vm.h"
 #endif
 
 static void process_cleanup (void);
@@ -728,8 +728,8 @@ install_page (void *upage, void *kpage, bool writable) {
 			&& pml4_set_page (t->pml4, upage, kpage, writable));
 }
 
-// NOTE: 임시 주석 처리
-// #else
+// TEST: 임시 주석 처리
+#else
 /* From here, codes will be used after project 3.
  * If you want to implement the function for only project 2, implement it on the
  * upper block. */
@@ -784,7 +784,6 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		/* TODO: Set up aux to pass information to the lazy_load_segment. */
 		struct lazy_load_data lazy_load_data;
 		lazy_load_data.lazy_load_file = file;
-		lazy_load_data.ofs = ofs;
 		lazy_load_data.page_read_bytes = page_read_bytes;
 		lazy_load_data.page_zero_bytes = page_zero_bytes;
 

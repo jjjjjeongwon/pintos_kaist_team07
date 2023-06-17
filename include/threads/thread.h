@@ -129,11 +129,11 @@ struct thread {
    uint64_t *pml4;                     /* Page map level 4 */
 #endif
 // NOTE: 코딩의 편의성을 위해 주석처리 해놨음.
-// #ifdef VM
+#ifdef VM
    /* Table for whole virtual memory owned by thread. */
    struct supplemental_page_table spt;
 // NOTE: 코딩의 편의성을 위해 주석처리 해놨음.
-// #endif
+#endif
    /* Owned by thread.c. */
    struct intr_frame tf;               /* Information for switching */
    unsigned magic;                     /* Detects stack overflow. */
