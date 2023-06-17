@@ -157,13 +157,13 @@ vm_evict_frame (void) {
  * and return it. This always return valid address. That is, if the user pool
  * memory is full, this function evicts the frame to get the available memory
  * space.*/
+// NOTE: NEW
 static struct frame *
 vm_get_frame (void) {
 	/* TODO: Fill this function. */
 	struct frame *frame;
-	struct page *p;
 
-	frame->kva = palloc_get_page(PAL_ZERO);;
+	frame->kva = palloc_get_page(PAL_ZERO);
 	frame->page = NULL; 
 
 	if (frame == NULL) {
@@ -193,18 +193,18 @@ vm_try_handle_fault (struct intr_frame *f UNUSED, void *addr UNUSED,
 	struct page *page = spt_find_page(spt, addr);
 	/* TODO: Validate the fault */
 	/* TODO: Your code goes here */
-	printf("addr occured PF = %p\n", addr);
-	if (user) {
-		printf("PF type: user\n");
-	}
-	if (write) {
+	// printf("addr occured PF = %p\n", addr);
+	// if (user) {
+	// 	printf("PF type: user\n");
+	// }
+	// if (write) {
 
-		printf("PF type: write\n");
+	// 	printf("PF type: write\n");
 
-	}
-	if (not_present) {
-		printf("PF type: not_present\n");
-	}
+	// }
+	// if (not_present) {
+	// 	printf("PF type: not_present\n");
+	// }
 	return vm_do_claim_page (page);
 }
 

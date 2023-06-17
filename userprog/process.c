@@ -729,7 +729,7 @@ setup_stack (struct intr_frame *if_) {
  * Returns true on success, false if UPAGE is already mapped or
  * if memory allocation fails. */
 // NOTE: 임시 주석 처리
-#else
+// #else
 /* From here, codes will be used after project 3.
  * If you want to implement the function for only project 2, implement it on the
  * upper block. */
@@ -803,6 +803,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 /* Create a PAGE of stack at the USER_STACK. Return true on success. */
 static bool
 setup_stack (struct intr_frame *if_) {
+
 	// struct page *upage; 
 	bool success = false;
 	void *stack_bottom = (void *) (((uint8_t *) USER_STACK) - PGSIZE);
