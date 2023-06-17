@@ -250,7 +250,6 @@ int process_exec(void *f_name)
         count++;
     }
 
-	// vm_init();
 
     /* And then load the binary */
 	success = load(file_name, &_if);
@@ -731,16 +730,6 @@ setup_stack (struct intr_frame *if_) {
  * if memory allocation fails. */
 // NOTE: 임시 주석 처리
 #else
-static bool
-install_page (void *upage, void *kpage, bool writable) {
-	struct thread *t = thread_current ();
-
-	/* Verify that there's not already a page at that virtual
-	 * address, then map our page there. */
-	return (pml4_get_page (t->pml4, upage) == NULL
-			&& pml4_set_page (t->pml4, upage, kpage, writable));
-}
-
 /* From here, codes will be used after project 3.
  * If you want to implement the function for only project 2, implement it on the
  * upper block. */
@@ -815,7 +804,6 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 static bool
 setup_stack (struct intr_frame *if_) {
 	// struct page *upage; 
-	uint8_t *kpage;
 	bool success = false;
 	void *stack_bottom = (void *) (((uint8_t *) USER_STACK) - PGSIZE);
 
@@ -825,15 +813,14 @@ setup_stack (struct intr_frame *if_) {
 	/* TODO: Your code goes here */
 	// NOTE: 당신은 vm/vm.h의 vm_type에 있는 
 	// 보조 marker(예 - VM_MARKER_0)들을 페이지를 마킹하는데 사용할 수 있습니다.
-	vm_alloc_page(VM_ANON, USER_STACK, false);
-	kpage = palloc_get_page (PAL_USER | PAL_ZERO);
-	if (kpage != NULL) {
-		success = install_page (stack_bottom, kpage, true);
-		if (success)
-			if_->rsp = USER_STACK;
-		else
-			palloc_free_page (kpage);
-	}
+	vm_alloc_page(VM_ANON, stack_bottom, false);
+	// kpage = palloc_get_page (PAL_USER | PAL_ZERO);
+	success = vm_claim_page(stack_bottom);
+	if (success)
+		if_->rsp = USER_STACK;
+	else
+		PANIC ("vm_claim_page failed!!!!!!!");
+		// palloc_free_page (kpage);
 	return success;
 }
 #endif /* VM */
