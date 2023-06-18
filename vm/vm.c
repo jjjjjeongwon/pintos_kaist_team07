@@ -32,8 +32,8 @@ static unsigned vm_hash_func(const struct hash_elem *e, void *aux){
 }
 
 static bool vm_less_func(const struct hash_elem *a, const struct hash_elem *b){
-	int a_va = hash_entry(a, struct page, elem)->va;
-	int b_va = hash_entry(b, struct page, elem)->va;
+	void *a_va = hash_entry(a, struct page, elem)->va;
+	void *b_va = hash_entry(b, struct page, elem)->va;
 
 	return b_va > a_va;
 }
