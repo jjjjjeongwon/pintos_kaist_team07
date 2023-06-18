@@ -235,7 +235,9 @@ int process_exec(void *f_name)
 
     /* We first kill the current context */
     process_cleanup();
-
+#ifdef VM
+	supplemental_page_table_init(&cur->spt);
+#endif
     // for argument parsing
     char *parse[64]; 
     int count = 0;  

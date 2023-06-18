@@ -26,8 +26,8 @@ vm_init (void) {
 	/* TODO: Your code goes here. */
 }
 
-static unsigned vm_hash_func(const struct hash_elem *e, void *aux){
-	const struct page *p = hash_entry(e, struct page, elem);
+static uint64_t vm_hash_func(const struct hash_elem *e, void *aux){
+	struct page *p = hash_entry(e, struct page, elem);
 	return hash_int(&p->va);
 }
 
@@ -105,11 +105,11 @@ err:
 /* Find VA from spt and return page. On error, return NULL. */
 struct page *
 spt_find_page (struct supplemental_page_table *spt UNUSED, void *va UNUSED) {
-	struct page *p = malloc(sizeof(struct page));
+	struct page p;
 	struct hash_elem *founded_elem;
 	
-	p->va = va;
-	founded_elem = hash_find(&spt->vm, &p->elem);
+	p.va = pg_round_down(va);
+	founded_elem = hash_find(&spt->vm, &p.elem);
 	return founded_elem != NULL ? hash_entry(founded_elem, struct page, elem) : NULL;
 }
 
