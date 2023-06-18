@@ -744,12 +744,15 @@ lazy_load_segment (struct page *page, void *aux) {
 	struct file *file = ll_data->lazy_load_file;
 	size_t page_read_bytes = ll_data->page_read_bytes;
 	size_t page_zero_bytes = ll_data->page_zero_bytes;
+	off_t ofs = ll_data->ofs;
 
+	file_seek (file, ofs);
 	if (file_read (file, kpage, page_read_bytes) != (int) page_read_bytes) {
 			palloc_free_page (kpage);
 			return false;
 		}
-		memset (kpage + page_read_bytes, 0, page_zero_bytes);
+	memset (kpage + page_read_bytes, 0, page_zero_bytes);
+	return true;
 }
 
 /* Loads a segment starting at offset OFS in FILE at address
@@ -784,9 +787,9 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		/* TODO: Set up aux to pass information to the lazy_load_segment. */
 		struct lazy_load_data lazy_load_data;
 		lazy_load_data.lazy_load_file = file;
-		lazy_load_data.ofs = ofs;
 		lazy_load_data.page_read_bytes = page_read_bytes;
 		lazy_load_data.page_zero_bytes = page_zero_bytes;
+		lazy_load_data.ofs = ofs;
 
 		void *aux = &lazy_load_data;
 		if (!vm_alloc_page_with_initializer (VM_ANON, upage,
@@ -796,6 +799,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		/* Advance. */
 		read_bytes -= page_read_bytes;
 		zero_bytes -= page_zero_bytes;
+		ofs += page_read_bytes;
 		upage += PGSIZE;
 	}
 	return true;

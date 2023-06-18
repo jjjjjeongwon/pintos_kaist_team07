@@ -28,7 +28,7 @@ vm_init (void) {
 
 static unsigned vm_hash_func(const struct hash_elem *e, void *aux){
 	const struct page *p = hash_entry(e, struct page, elem);
-	return hash_bytes(&p->va, &p->elem);
+	return hash_int(&p->va);
 }
 
 static bool vm_less_func(const struct hash_elem *a, const struct hash_elem *b){
@@ -83,22 +83,20 @@ vm_alloc_page_with_initializer (enum vm_type type, void *upage, bool writable,
 		/* TODO: Create the page, fetch the initialier according to the VM type,
 		 * TODO: and then create "uninit" page struct by calling uninit_new. You
 		 * TODO: should modify the field after calling the uninit_new. */
-		struct page *p;
+		struct page *p = malloc(sizeof(struct page));
 		p->va = upage;
 		
 		switch (type){
 			case VM_FILE:
-				// NOTE: init 인자가 이것인지 확실하지 않음
-				uninit_new(p, upage, vm_file_init, VM_FILE, aux, file_backed_initializer);
+				uninit_new(p, upage, init, VM_FILE, aux, file_backed_initializer);
 				break;
 			case VM_ANON:
-				// NOTE: init 인자가 이것인지 확실하지 않음
-				uninit_new(p, upage, vm_anon_init, VM_ANON, aux, anon_initializer);
+				uninit_new(p, upage, init, VM_ANON, aux, anon_initializer);
 				break;
 		} 
-
+		p->writable = writable;
 		/* TODO: Insert the page into the spt. */
-		hash_insert(&spt->vm, &p->elem);
+		return spt_insert_page(spt, p);
 	}
 err:
 	return false;
@@ -107,12 +105,12 @@ err:
 /* Find VA from spt and return page. On error, return NULL. */
 struct page *
 spt_find_page (struct supplemental_page_table *spt UNUSED, void *va UNUSED) {
-	struct page p;
-	struct hash_elem *e;
+	struct page *p;
+	struct hash_elem *founded_elem;
 	
-	p.va = va;
-	e = hash_find(&spt, &p.elem);
-	return e != NULL ? hash_entry(e, struct page, elem) : NULL;
+	p->va = va;
+	founded_elem = hash_find(&spt, &p->elem);
+	return founded_elem != NULL ? hash_entry(founded_elem, struct page, elem) : NULL;
 }
 
 /* Insert PAGE into spt with validation. */
@@ -120,7 +118,7 @@ bool
 spt_insert_page (struct supplemental_page_table *spt UNUSED,
 		struct page *page UNUSED) {
 	/* TODO: Fill this function. */
-	if (hash_insert(&spt->vm, &page->elem) == &page->elem){
+	if (hash_insert(&spt->vm, &page->elem) == NULL){
 		return true;
 	}
 	return false;
@@ -160,7 +158,7 @@ vm_evict_frame (void) {
 static struct frame *
 vm_get_frame (void) {
 	/* TODO: Fill this function. */
-	struct frame *frame;
+	struct frame *frame = malloc(sizeof(struct frame));
 	if (frame == NULL) {
 		PANIC ("todo");
 	}
@@ -190,8 +188,21 @@ vm_try_handle_fault (struct intr_frame *f UNUSED, void *addr UNUSED,
 	struct page *page = NULL;
 	/* TODO: Validate the fault */
 	/* TODO: Your code goes here */
-
-	return vm_do_claim_page (page);
+	if (user) {
+		printf("User\n");
+	}
+	if (write) {
+		printf("Write\n");
+	}
+	if (not_present) {
+		printf("Not_present\n");
+		vm_alloc_page(VM_ANON, addr, true);
+		page = spt_find_page(spt, addr);
+		page->uninit.init(page, page->uninit.aux);
+		return vm_do_claim_page (page);
+		// return install_page(page->va, page->frame->kva, true);
+	}
+	return false;
 }
 
 /* Free the page.
@@ -225,12 +236,10 @@ vm_do_claim_page (struct page *page) {
 	page->frame = frame;
 
 	/* TODO: Insert page table entry to map page's VA to frame's PA. */
-	if(install_page(page->va, frame->kva, false) == false) {
-		// FIXME: 추후 swapping 구현 시 확인할 것!!!!
-		// return swap_in (page, frame->kva);
-		return false;
+	if(install_page(page->va, frame->kva, page->writable)) {
+		return swap_in (page, frame->kva);
 	}
-	return true;
+	return false;
 }
 
 /* Initialize new supplemental page table */
