@@ -105,11 +105,11 @@ err:
 /* Find VA from spt and return page. On error, return NULL. */
 struct page *
 spt_find_page (struct supplemental_page_table *spt UNUSED, void *va UNUSED) {
-	struct page *p;
+	struct page *p = malloc(sizeof(struct page));
 	struct hash_elem *founded_elem;
 	
 	p->va = va;
-	founded_elem = hash_find(&spt, &p->elem);
+	founded_elem = hash_find(&spt->vm, &p->elem);
 	return founded_elem != NULL ? hash_entry(founded_elem, struct page, elem) : NULL;
 }
 
