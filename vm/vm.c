@@ -28,7 +28,7 @@ vm_init (void) {
 
 static uint64_t vm_hash_func(const struct hash_elem *e, void *aux){
 	struct page *p = hash_entry(e, struct page, elem);
-	return hash_int(&p->va);
+	return hash_int(p->va);
 }
 
 static bool vm_less_func(const struct hash_elem *a, const struct hash_elem *b){
@@ -84,8 +84,6 @@ vm_alloc_page_with_initializer (enum vm_type type, void *upage, bool writable,
 		 * TODO: and then create "uninit" page struct by calling uninit_new. You
 		 * TODO: should modify the field after calling the uninit_new. */
 		struct page *p = malloc(sizeof(struct page));
-		p->va = upage;
-		
 		switch (type){
 			case VM_FILE:
 				uninit_new(p, upage, init, VM_FILE, aux, file_backed_initializer);

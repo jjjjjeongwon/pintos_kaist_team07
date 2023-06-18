@@ -745,7 +745,7 @@ lazy_load_segment (struct page *page, void *aux) {
 	uint8_t *kpage = page->frame->kva;
 	struct file *file = ll_data->lazy_load_file;
 	size_t page_read_bytes = ll_data->page_read_bytes;
-	size_t page_zero_bytes = ll_data->page_zero_bytes;
+	size_t page_zero_bytes = PGSIZE - page_read_bytes;
 	off_t ofs = ll_data->ofs;
 
 	file_seek (file, ofs);
@@ -819,17 +819,12 @@ setup_stack (struct intr_frame *if_) {
 	/* TODO: Your code goes here */
 	// NOTE: 당신은 vm/vm.h의 vm_type에 있는 
 	// 보조 marker(예 - VM_MARKER_0)들을 페이지를 마킹하는데 사용할 수 있습니다.
-	vm_alloc_page(VM_ANON, stack_bottom, false);
+	vm_alloc_page(VM_ANON, stack_bottom, true);
 	success = vm_claim_page(stack_bottom);
 	if (success)
 		if_->rsp = USER_STACK;
 	else {
-		struct thread *curr = thread_current();
-		struct page *del_page = spt_find_page(&curr->spt, stack_bottom);
-		if (del_page != NULL) {
-			palloc_free_page(del_page->frame->kva);
-			spt_remove_page(&curr->spt, del_page);
-		}
+		
 	}
 	return success;
 }
