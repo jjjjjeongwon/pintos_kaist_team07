@@ -787,13 +787,13 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 
 
 		/* TODO: Set up aux to pass information to the lazy_load_segment. */
-		struct lazy_load_data lazy_load_data;
-		lazy_load_data.lazy_load_file = file;
-		lazy_load_data.page_read_bytes = page_read_bytes;
-		lazy_load_data.page_zero_bytes = page_zero_bytes;
-		lazy_load_data.ofs = ofs;
+		struct lazy_load_data *lazy_load_data = malloc(sizeof(struct lazy_load_data));
+		lazy_load_data->lazy_load_file = file;
+		lazy_load_data->page_read_bytes = page_read_bytes;
+		lazy_load_data->page_zero_bytes = page_zero_bytes;
+		lazy_load_data->ofs = ofs;
 
-		void *aux = &lazy_load_data;
+		void *aux = lazy_load_data;
 		if (!vm_alloc_page_with_initializer (VM_ANON, upage,
 					writable, lazy_load_segment, aux))
 			return false;
