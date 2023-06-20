@@ -255,7 +255,7 @@ supplemental_page_table_copy (struct supplemental_page_table *dst UNUSED,
 			hash_first(&iterator, &src->vm);
 			while (hash_next(&iterator)) {
 				struct page *parent_page = hash_entry(iterator.elem, struct page, elem);
-				if (vm_alloc_page_with_initializer(parent_page->uninit.type, parent_page->va, parent_page->writable, parent_page->uninit.init, parent_page->uninit.aux)) {
+				if (vm_alloc_page_with_initializer(parent_page->operations->type, parent_page->va, parent_page->writable, parent_page->uninit.init, parent_page->uninit.aux)) {
 					struct page temp_page;
 					temp_page.va = parent_page->va;
 					struct hash_elem *child_page_elem = hash_find(&dst->vm, &temp_page.elem);
@@ -263,15 +263,13 @@ supplemental_page_table_copy (struct supplemental_page_table *dst UNUSED,
 					// 여기서 두 페이지 복사 어떻게 할지 고민중!!!!
 
 					// printf("alloc succese! child page addr: %p is size is %d?\n\n", child_page, sizeof(struct page));
+					vm_do_claim_page(child_page);
+					memcpy(child_page->frame->kva, parent_page->frame->kva, PGSIZE);
+
 
 					// printf("prev child va %p\n", child_page->va);
 					// printf("prev child frame->kva %p\n", child_page->frame->kva);
-					struct frame *temp_frame = malloc(sizeof(struct frame));
-					memcpy(temp_frame, parent_page->frame, sizeof(struct frame));
-					temp_frame->page = child_page;
-					child_page->frame = temp_frame;
 					
-		
 					// printf("----------------copy result-----------------\n");
 					// printf("parent va    %p copied at child va    %p\n", parent_page->va, child_page->va);
 					// printf("parent frame->kva %p copied at child frame->kva %p\n", parent_page->frame->kva, child_page->frame->kva);
