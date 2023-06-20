@@ -252,38 +252,45 @@ bool
 supplemental_page_table_copy (struct supplemental_page_table *dst UNUSED,
 		struct supplemental_page_table *src UNUSED) {
 			struct hash_iterator iterator;
-			hash_init(&dst->vm, vm_hash_func, vm_less_func, NULL);
 			hash_first(&iterator, &src->vm);
 			while (hash_next(&iterator)) {
-				// if (&iterator.elem == NULL) break;
-				struct page *copy_page = malloc(sizeof(struct page));
-				copy_page = hash_entry(iterator.elem, struct page, elem);
-				struct page *new_page = malloc(sizeof(struct page));
-				// memcpy (new_page ,copy_page, sizeof(struct page));
-				uninit_new(new_page, copy_page->va, copy_page->uninit.init, copy_page->uninit.type, copy_page->uninit.aux, copy_page->uninit.page_initializer);
-				new_page->frame = copy_page->frame;
-				spt_insert_page(dst, new_page);
+				struct page *parent_page = hash_entry(iterator.elem, struct page, elem);
+				if (vm_alloc_page_with_initializer(parent_page->uninit.type, parent_page->va, parent_page->writable, parent_page->uninit.init, NULL)) {
+					printf("alloc succese!\n\n\n\n\n\n");
+					struct page temp_page;
+					temp_page.va = parent_page->va;
+					struct hash_elem *child_page_elem = hash_find(&dst->vm, &temp_page.elem);
+					struct page *child_page = hash_entry(child_page_elem, struct page, elem);
+					// 여기서 두 페이지 복사 어떻게 할지 고민중!!!!
+				}
+				else {
+					printf("alloc failed!!! \n\n");
+				}				
 			}
-			hash_first(&iterator, &src->vm);
-			printf("page address: %p\n", hash_entry(iterator.elem, struct page, elem));
-			printf("page->va address: %p\n", hash_entry(iterator.elem, struct page, elem)->va);
-			printf("page->frame address: %p\n", hash_entry(iterator.elem, struct page, elem)->frame);
-			printf("----------FIRST ELEM-------------\n");
+			
+				
 
-			while (hash_next(&iterator))
-			{
-				printf("page address: %p\n", hash_entry(iterator.elem, struct page, elem));
-				printf("page->va address: %p\n", hash_entry(iterator.elem, struct page, elem)->va);
-				printf("page->frame address: %p\n", hash_entry(iterator.elem, struct page, elem)->frame);
-			}
-			printf("----------NEW-------------\n");
-			hash_first(&iterator, &dst->vm);
-			while (hash_next(&iterator))
-			{
-				printf("page address: %p\n", hash_entry(iterator.elem, struct page, elem));
-				printf("page->va address: %p\n", hash_entry(iterator.elem, struct page, elem)->va);
-				printf("page->frame address: %p\n", hash_entry(iterator.elem, struct page, elem)->frame);
-			}
+			// NOTE: For Test
+			// hash_first(&iterator, &src->vm);
+			// printf("page address: %p\n", hash_entry(iterator.elem, struct page, elem));
+			// printf("page->va address: %p\n", hash_entry(iterator.elem, struct page, elem)->va);
+			// printf("page->frame address: %p\n", hash_entry(iterator.elem, struct page, elem)->frame);
+			// printf("----------FIRST ELEM-------------\n");
+
+			// while (hash_next(&iterator))
+			// {
+			// 	printf("page address: %p\n", hash_entry(iterator.elem, struct page, elem));
+			// 	printf("page->va address: %p\n", hash_entry(iterator.elem, struct page, elem)->va);
+			// 	printf("page->frame address: %p\n", hash_entry(iterator.elem, struct page, elem)->frame);
+			// }
+			// printf("----------NEW-------------\n");
+			// hash_first(&iterator, &dst->vm);
+			// while (hash_next(&iterator))
+			// {
+			// 	printf("page address: %p\n", hash_entry(iterator.elem, struct page, elem));
+			// 	printf("page->va address: %p\n", hash_entry(iterator.elem, struct page, elem)->va);
+			// 	printf("page->frame address: %p\n", hash_entry(iterator.elem, struct page, elem)->frame);
+			// }
 }
 
 /* Free the resource hold by the supplemental page table */
