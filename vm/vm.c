@@ -254,55 +254,20 @@ supplemental_page_table_copy (struct supplemental_page_table *dst UNUSED,
 			struct hash_iterator iterator;
 			hash_first(&iterator, &src->vm);
 			while (hash_next(&iterator)) {
-				struct page *parent_page = hash_entry(iterator.elem, struct page, elem);
-				if (vm_alloc_page_with_initializer(parent_page->operations->type, parent_page->va, parent_page->writable, parent_page->uninit.init, parent_page->uninit.aux)) {
-					struct page temp_page;
-					temp_page.va = parent_page->va;
-					struct hash_elem *child_page_elem = hash_find(&dst->vm, &temp_page.elem);
-					struct page *child_page = hash_entry(child_page_elem, struct page, elem);
-					// 여기서 두 페이지 복사 어떻게 할지 고민중!!!!
-
-					// printf("alloc succese! child page addr: %p is size is %d?\n\n", child_page, sizeof(struct page));
-					vm_do_claim_page(child_page);
-					memcpy(child_page->frame->kva, parent_page->frame->kva, PGSIZE);
-
-
-					// printf("prev child va %p\n", child_page->va);
-					// printf("prev child frame->kva %p\n", child_page->frame->kva);
-					
-					// printf("----------------copy result-----------------\n");
-					// printf("parent va    %p copied at child va    %p\n", parent_page->va, child_page->va);
-					// printf("parent frame->kva %p copied at child frame->kva %p\n", parent_page->frame->kva, child_page->frame->kva);
-
+				struct page *parent_page = hash_entry(hash_cur(&iterator), struct page, elem);
+				if (!vm_alloc_page_with_initializer(parent_page->uninit.type, parent_page->va, parent_page->writable, parent_page->uninit.init, parent_page->uninit.aux)) {
+					return false;
 				}
-				else {
-					printf("alloc failed!!! \n\n");
-				}				
-			}
-			
-				
+				struct page temp_page;
+				temp_page.va = parent_page->va;
+				struct hash_elem *child_page_elem = hash_find(&dst->vm, &temp_page.elem);
+				struct page *child_page = hash_entry(child_page_elem, struct page ,elem);
 
-			// NOTE: For Test
-			// hash_first(&iterator, &src->vm);
-			// printf("page address: %p\n", hash_entry(iterator.elem, struct page, elem));
-			// printf("page->va address: %p\n", hash_entry(iterator.elem, struct page, elem)->va);
-			// printf("page->frame address: %p\n", hash_entry(iterator.elem, struct page, elem)->frame);
-			// printf("----------FIRST ELEM-------------\n");
-
-			// while (hash_next(&iterator))
-			// {
-			// 	printf("page address: %p\n", hash_entry(iterator.elem, struct page, elem));
-			// 	printf("page->va address: %p\n", hash_entry(iterator.elem, struct page, elem)->va);
-			// 	printf("page->frame address: %p\n", hash_entry(iterator.elem, struct page, elem)->frame);
-			// }
-			// printf("----------NEW-------------\n");
-			// hash_first(&iterator, &dst->vm);
-			// while (hash_next(&iterator))
-			// {
-			// 	printf("page address: %p\n", hash_entry(iterator.elem, struct page, elem));
-			// 	printf("page->va address: %p\n", hash_entry(iterator.elem, struct page, elem)->va);
-			// 	printf("page->frame address: %p\n", hash_entry(iterator.elem, struct page, elem)->frame);
-			// }
+				if (parent_page->frame != NULL) {
+					if(!vm_do_claim_page(child_page)) return false;
+					memcpy(child_page->frame->kva, parent_page->frame->kva, PGSIZE);
+				}
+			} return true;
 }
 
 /* Free the resource hold by the supplemental page table */
