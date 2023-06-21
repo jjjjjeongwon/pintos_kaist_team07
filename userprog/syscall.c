@@ -188,7 +188,7 @@ int exec(const char *cmd_line)
 {
 	char *fn_copy;
 	tid_t tid;
-	
+	check_address(cmd_line);
 	fn_copy = palloc_get_page (PAL_ZERO);
 	if (fn_copy == NULL)
 		return TID_ERROR;
