@@ -286,6 +286,7 @@ buffer로부터 open file fd로 size 바이트를 적어줍니다.
 */
 int write(int fd, const void *buffer, unsigned size)
 {
+	if (fd < -8000 || fd > 8000) exit(-1);
 	check_address(buffer);
 	int file_size;
 	if (fd == STDOUT_FILENO)
