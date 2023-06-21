@@ -189,7 +189,8 @@ vm_try_handle_fault (struct intr_frame *f UNUSED, void *addr UNUSED,
 	struct page *page = NULL;
 	/* TODO: Validate the fault */
 	/* TODO: Your code goes here */
-	if (user) {
+	if (addr == NULL) exit(-1);
+	if (user) { 
 		// printf("User\n");
 	}
 	if (write) {
