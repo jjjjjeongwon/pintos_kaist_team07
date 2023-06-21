@@ -256,7 +256,7 @@ int read(int fd, void *buffer, unsigned size)
         }
     }
     else if (fd == 1)
-    {
+    { 	
         return -1;
     }
     else
@@ -343,7 +343,7 @@ void close(int fd)
 void check_address(void *addr)
 {
 	struct thread *curr = thread_current();
-	if (is_kernel_vaddr(addr) || pml4_get_page(curr->pml4,addr) == NULL)
+	if (is_kernel_vaddr(addr))
 	{
 		exit(-1);
 	}
