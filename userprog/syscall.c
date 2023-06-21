@@ -151,6 +151,9 @@ void exit(int status)
 bool create(const char *file, unsigned initial_size)
 {
 	check_address(file);
+	if (file == NULL) {
+		exit(-1);
+	}
 	return filesys_create(file, initial_size);
 }
 
@@ -212,6 +215,9 @@ file(첫 번째 인자)이라는 이름을 가진 파일을 엽니다. 해당 �
 int open(const char *file)
 {
 	check_address(file);
+	if (file == NULL) {
+		exit(-1);
+	}
 	struct file *open_file = filesys_open(file);
 	if(open_file == NULL){
 		return -1;
