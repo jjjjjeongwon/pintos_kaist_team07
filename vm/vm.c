@@ -12,6 +12,7 @@
 
 // NOTE: 임시 선언
 static bool install_page (void *upage, void *kpage, bool writable);
+void spt_dealloc_page (struct hash_elem *e, void *aux);
 
 /* Initializes the virtual memory subsystem by invoking each subsystem's
  * intialize codes. */
@@ -277,8 +278,27 @@ supplemental_page_table_kill (struct supplemental_page_table *spt UNUSED) {
 	 * TODO: writeback all the modified contents to the storage. 
 	 * NOTE: 두 번째 TODO는 swap에서 사용하는게 아닐까? 
 	 *  */
-	hash_destroy(&spt->vm, NULL);
+	hash_destroy(&spt->vm, spt_dealloc_page);
 }
+
+
+
+
+void spt_dealloc_page (struct hash_elem *e, void *aux){
+
+	//  해쉬 일름 사용 -> 느낌상 페이지로 확대시키기
+	struct page *page = hash_entry (e ,struct page, elem);
+
+	// 	vm_dealloc_page로 페이지들을 하나씩 뽀수고 free시키기
+	vm_dealloc_page(page);
+}
+
+
+
+
+
+
+
 
 static bool
 install_page (void *upage, void *kpage, bool writable) {

@@ -58,4 +58,11 @@ anon_swap_out (struct page *page) {
 static void
 anon_destroy (struct page *page) {
 	struct anon_page *anon_page = &page->anon;
+
+	// JUNHO: (!) 
+	free(page->frame);
+	
+	// if(anon_page->aux != NULL){
+	// free(anon_page->aux);
+	// }
 }
