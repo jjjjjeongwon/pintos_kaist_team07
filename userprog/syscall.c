@@ -16,6 +16,7 @@
 #include "filesys/file.h"
 #include "userprog/process.h"
 #include <string.h>
+#include "vm/vm.h"
 
 void syscall_entry(void);
 void syscall_handler(struct intr_frame *);
@@ -154,7 +155,7 @@ bool create(const char *file, unsigned initial_size)
 	if (file == NULL) {
 		exit(-1);
 	}
-	return filesys_create(file, initial_size);
+	return filesys_create(file, initial_size);	
 }
 
 /*
@@ -349,7 +350,7 @@ void close(int fd)
 void check_address(void *addr)
 {
 	struct thread *curr = thread_current();
-	if (is_kernel_vaddr(addr))
+	if (is_kernel_vaddr(addr) || !spt_find_page(&thread_current()->spt, addr))
 	{
 		exit(-1);
 	}
