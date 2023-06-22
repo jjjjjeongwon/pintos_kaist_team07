@@ -13,6 +13,8 @@
 // NOTE: 임시 선언
 static bool install_page (void *upage, void *kpage, bool writable);
 void spt_dealloc_page (struct hash_elem *e, void *aux);
+struct page * find_stack_page (void);
+
 
 /* Initializes the virtual memory subsystem by invoking each subsystem's
  * intialize codes. */
@@ -173,6 +175,10 @@ vm_get_frame (void) {
 /* Growing the stack. */
 static void
 vm_stack_growth (void *addr UNUSED) {
+	if (vm_alloc_page(VM_ANON, addr, true)) {
+		spt_find_page(&thread_current()->spt, addr)->uninit.type |= VM_MARKER_0;
+	}
+	PANIC ("cant expand stack!!!!!");
 }
 
 /* Handle the fault on write_protected page */
@@ -184,6 +190,7 @@ vm_handle_wp (struct page *page UNUSED) {
 bool
 vm_try_handle_fault (struct intr_frame *f UNUSED, void *addr UNUSED,
 		bool user UNUSED, bool write UNUSED, bool not_present UNUSED) {
+	// printf("PF!!\n\n");
 	struct thread *cur = thread_current();
 	struct supplemental_page_table *spt UNUSED = &thread_current ()->spt;
 	struct page *page = NULL;
@@ -198,13 +205,32 @@ vm_try_handle_fault (struct intr_frame *f UNUSED, void *addr UNUSED,
 		// printf("Write\n");
 	}
 	if (not_present) {
-		// printf("Not_present\n");
+		if (write){
+			// printf("Entered !!\n\n\n\n\n\n\n");
+			struct page *stack_page = find_stack_page(); 
+			stack_page->uninit.type &= ~VM_MARKER_0;
+			if (f->rsp-8 < addr && addr < stack_page->va-PGSIZE) {
+			vm_stack_growth(addr);
+			return true;
+			}
+		}
+		// printf("Not_present, rsp: %p addr: %p\n", f->rsp, addr);
 		vm_alloc_page(VM_ANON, addr, true);
 		page = spt_find_page(spt, addr);
 		return vm_do_claim_page (page);
-		// return install_page(page->va, page->frame->kva, true);
 	}
 	return false;
+}
+
+struct page * find_stack_page (void) {
+	struct hash_iterator iterator;
+	hash_first(&iterator, &thread_current()->spt);
+	while (hash_next(&iterator)) {
+		if (hash_entry(iterator.elem, struct page, elem)->uninit.type & VM_MARKER_0) {
+			return hash_entry(iterator.elem, struct page, elem);
+		}
+	}
+	return NULL;
 }
 
 /* Free the page.
