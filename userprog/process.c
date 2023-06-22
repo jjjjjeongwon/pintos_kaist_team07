@@ -820,6 +820,11 @@ setup_stack (struct intr_frame *if_) {
 	// NOTE: 당신은 vm/vm.h의 vm_type에 있는 
 	// 보조 marker(예 - VM_MARKER_0)들을 페이지를 마킹하는데 사용할 수 있습니다.
 	vm_alloc_page(VM_ANON, stack_bottom, true);
+
+	// HYUNGJUN: Mark Stack Page
+	struct page *stack_page = spt_find_page(&thread_current()->spt, stack_bottom);
+	if (stack_page) stack_page->uninit.type |= VM_MARKER_0;
+	
 	success = vm_claim_page(stack_bottom);
 	if (success)
 		if_->rsp = USER_STACK;

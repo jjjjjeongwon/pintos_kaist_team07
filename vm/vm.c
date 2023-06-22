@@ -9,10 +9,12 @@
 #include "threads/mmu.h"
 #include "userprog/process.h"
 #include <string.h>
+#include <stdio.h>
 
 // NOTE: 임시 선언
 static bool install_page (void *upage, void *kpage, bool writable);
 void spt_dealloc_page (struct hash_elem *e, void *aux);
+struct page* find_stack_page(void);
 
 /* Initializes the virtual memory subsystem by invoking each subsystem's
  * intialize codes. */
@@ -171,8 +173,16 @@ vm_get_frame (void) {
 }
 
 /* Growing the stack. */
-static void
+static bool
 vm_stack_growth (void *addr UNUSED) {
+	if (vm_alloc_page(VM_ANON, pg_round_down(addr), true)) {
+		struct page *new_stack_page = spt_find_page(&thread_current()->spt, addr);
+		if (new_stack_page) {
+			new_stack_page->uninit.type |= VM_MARKER_0;
+			return true;
+		}
+	}
+	return false;
 }
 
 /* Handle the fault on write_protected page */
@@ -199,12 +209,35 @@ vm_try_handle_fault (struct intr_frame *f UNUSED, void *addr UNUSED,
 	}
 	if (not_present) {
 		// printf("Not_present\n");
+		if (write) {
+			if (find_stack_page()) {
+				struct page *stack_page = find_stack_page();
+				if (f->rsp-8 <= addr && addr < stack_page->va) {
+					if (vm_stack_growth(addr)) {
+						stack_page->uninit.type &= ~VM_MARKER_0;
+						return true;
+					}
+					
+				}
+			}
+		}
 		vm_alloc_page(VM_ANON, addr, true);
 		page = spt_find_page(spt, addr);
 		return vm_do_claim_page (page);
-		// return install_page(page->va, page->frame->kva, true);
 	}
 	return false;
+}
+
+struct page* find_stack_page(void) {
+	struct hash_iterator iterator;
+	hash_first(&iterator, &thread_current()->spt.vm);
+	while (hash_next(&iterator)) {
+		if (hash_entry(hash_cur(&iterator), struct page, elem)->uninit.type & VM_MARKER_0) {
+			struct page *found_page = hash_entry(hash_cur(&iterator), struct page, elem);
+			return found_page;
+		}
+	}
+	return NULL;
 }
 
 /* Free the page.
@@ -258,7 +291,7 @@ supplemental_page_table_copy (struct supplemental_page_table *dst UNUSED,
 			hash_first(&iterator, &src->vm);
 			while (hash_next(&iterator)) {
 				struct page *parent_page = hash_entry(hash_cur(&iterator), struct page, elem);
-				if (!vm_alloc_page_with_initializer(parent_page->uninit.type, parent_page->va, parent_page->writable, parent_page->uninit.init, parent_page->uninit.aux)) {
+				if (!vm_alloc_page_with_initializer(page_get_type(parent_page), parent_page->va, parent_page->writable, parent_page->uninit.init, parent_page->uninit.aux)) {
 					return false;
 				}
 				struct page temp_page;
