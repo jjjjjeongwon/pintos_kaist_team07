@@ -190,7 +190,7 @@ vm_handle_wp (struct page *page UNUSED) {
 bool
 vm_try_handle_fault (struct intr_frame *f UNUSED, void *addr UNUSED,
 		bool user UNUSED, bool write UNUSED, bool not_present UNUSED) {
-	printf("PF!!\n\n");
+	// printf("PF!!\n\n");
 	struct thread *cur = thread_current();
 	struct supplemental_page_table *spt UNUSED = &thread_current ()->spt;
 	struct page *page = NULL;
@@ -199,19 +199,22 @@ vm_try_handle_fault (struct intr_frame *f UNUSED, void *addr UNUSED,
 	if (addr == NULL) exit(-1);
 	if (!is_user_vaddr(addr)) exit(-1);
 	if (user) { 
-		printf("User\n");
+		// printf("User\n");
 	}
 	if (write) {
-		printf("Write\n");
+		// printf("Write\n");
 	}
 	if (not_present) {
-		struct page *stack_page = find_stack_page(); 
-		stack_page->uninit.type &= ~VM_MARKER_0;
-		if (write && (f->rsp-8 < addr < stack_page->va+PGSIZE)){
+		if (write){
+			// printf("Entered !!\n\n\n\n\n\n\n");
+			struct page *stack_page = find_stack_page(); 
+			stack_page->uninit.type &= ~VM_MARKER_0;
+			if (f->rsp-8 < addr && addr < stack_page->va-PGSIZE) {
 			vm_stack_growth(addr);
 			return true;
+			}
 		}
-		printf("Not_present, rsp: %p addr: %p\n", f->rsp, addr);
+		// printf("Not_present, rsp: %p addr: %p\n", f->rsp, addr);
 		vm_alloc_page(VM_ANON, addr, true);
 		page = spt_find_page(spt, addr);
 		return vm_do_claim_page (page);
