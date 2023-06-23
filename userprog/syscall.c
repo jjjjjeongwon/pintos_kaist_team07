@@ -39,6 +39,7 @@ void close(int fd);
 void check_address(void *addr);
 int process_add_file(struct file *f);
 struct file *process_get_file(int fd);
+void check_valid_buffer (void* buffer);
 
 /* System call.
  *
@@ -247,6 +248,7 @@ buffer 안에 fd 로 열려있는 파일로부터 size 바이트를 읽습니다
 int read(int fd, void *buffer, unsigned size)
 {
 	check_address(buffer);
+    check_valid_buffer (buffer);
     int file_size;
     char *read_buffer = buffer;
     if (fd == 0)
@@ -356,4 +358,9 @@ void check_address(void *addr)
 	{
 		exit(-1);
 	}
+}
+
+void check_valid_buffer (void* buffer) {
+	struct page *page = spt_find_page(&thread_current()->spt, buffer);
+	if (page == NULL || page->writable == false) exit(-1); 
 }
