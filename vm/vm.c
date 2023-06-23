@@ -204,6 +204,10 @@ vm_try_handle_fault (struct intr_frame *f UNUSED, void *addr UNUSED,
 	if (addr == NULL) exit(-1);
 	if (!is_user_vaddr(addr)) exit(-1);
 	if(0x04000000 <= addr && addr <= USER_STACK - (1 << 20)) exit(-1);
+	// NOTE: 코드 세그먼트에 write 시 exit
+	if(write && addr >= 0x400000 && addr <= 0x604000) exit(-1);
+
+	// printf("rsp: %p, addr %p\n",f->rsp, addr);
 	if (user) { 
 		// printf("User\n");
 	}
