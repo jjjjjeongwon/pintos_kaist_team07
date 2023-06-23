@@ -177,10 +177,11 @@ static bool
 vm_stack_growth (void *addr UNUSED) {
 	if (vm_alloc_page(VM_ANON, pg_round_down(addr), true)) {
 		struct page *new_stack_page = spt_find_page(&thread_current()->spt, addr);
-		if (new_stack_page) {
+		if (new_stack_page && !is_kernel_vaddr(pg_round_down(addr))) {
 			new_stack_page->uninit.type |= VM_MARKER_0;
 			return true;
 		}
+		return false;
 	}
 	return false;
 }
@@ -202,6 +203,7 @@ vm_try_handle_fault (struct intr_frame *f UNUSED, void *addr UNUSED,
 	/* TODO: Your code goes here */
 	if (addr == NULL) exit(-1);
 	if (!is_user_vaddr(addr)) exit(-1);
+	if(0x04000000 <= addr && addr <= USER_STACK - (1 << 20)) exit(-1);
 	if (user) { 
 		// printf("User\n");
 	}
@@ -218,11 +220,11 @@ vm_try_handle_fault (struct intr_frame *f UNUSED, void *addr UNUSED,
 						stack_page->uninit.type &= ~VM_MARKER_0;
 						return true;
 					}
-					
 				}
 			}
 		}
 		vm_alloc_page(VM_ANON, addr, true);
+		check_address(addr);
 		page = spt_find_page(spt, addr);
 		return vm_do_claim_page (page);
 	}
@@ -317,9 +319,6 @@ supplemental_page_table_kill (struct supplemental_page_table *spt UNUSED) {
 	hash_destroy(&spt->vm, spt_dealloc_page);
 }
 
-
-
-
 void spt_dealloc_page (struct hash_elem *e, void *aux){
 
 	//  해쉬 일름 사용 -> 느낌상 페이지로 확대시키기
@@ -328,13 +327,6 @@ void spt_dealloc_page (struct hash_elem *e, void *aux){
 	// 	vm_dealloc_page로 페이지들을 하나씩 뽀수고 free시키기
 	vm_dealloc_page(page);
 }
-
-
-
-
-
-
-
 
 static bool
 install_page (void *upage, void *kpage, bool writable) {
