@@ -175,7 +175,7 @@ vm_get_frame (void) {
 /* Growing the stack. */
 static bool
 vm_stack_growth (void *addr UNUSED) {
-	if (vm_alloc_page(VM_ANON, pg_round_down(addr), true)) {
+	if (vm_alloc_page(VM_ANON, addr, true)) {
 		struct page *new_stack_page = spt_find_page(&thread_current()->spt, addr);
 		if (new_stack_page && !is_kernel_vaddr(pg_round_down(addr))) {
 			new_stack_page->uninit.type |= VM_MARKER_0;
@@ -220,7 +220,7 @@ vm_try_handle_fault (struct intr_frame *f UNUSED, void *addr UNUSED,
 			if (find_stack_page()) {
 				struct page *stack_page = find_stack_page();
 				if (f->rsp-8 <= addr && addr < stack_page->va) {
-					if (vm_stack_growth(addr)) {
+					if (vm_stack_growth(find_stack_page()->va-PGSIZE)) {
 						stack_page->uninit.type &= ~VM_MARKER_0;
 						return true;
 					}
