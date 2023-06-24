@@ -1,6 +1,7 @@
 /* file.c: Implementation of memory backed file object (mmaped object). */
 
 #include "vm/vm.h"
+#include <vaddr.h>
 
 static bool file_backed_swap_in (struct page *page, void *kva);
 static bool file_backed_swap_out (struct page *page);
@@ -57,9 +58,20 @@ file_backed_destroy (struct page *page) {
 void *
 do_mmap (void *addr, size_t length, int writable,
 		struct file *file, off_t offset) {
+			// file_seek(file, offset);
+			// vm_alloc_page(VM_FILE, addr, writable);
+			// memcpy(addr, file, offset);
+		// return addr;
+		size_t start_offset = offset & ~(PGSIZE - 1);
+		size_t read_bytes = offset - start_offset + length;
+		file_seek(file, offset);
+		if (file_read(file, addr, read_bytes) != (int)read_bytes){
+			
+		}
 }
 
 /* Do the munmap */
 void
 do_munmap (void *addr) {
+	vm_dealloc_page(spt_find_page(thread_current(), addr));
 }

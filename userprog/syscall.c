@@ -122,6 +122,10 @@ void syscall_handler(struct intr_frame *f UNUSED)
 	case SYS_CLOSE: /* Close a file. */
 		close(f->R.rdi);
 		break;
+	case SYS_MMAP:
+		mmap(f->R.rdi, f->R.rsi, f->R.rdx,f->R.r10, f->R.r8);                   /* Map a file into memory. */
+	case SYS_MUNMAP:
+		munmap(f->R.rdi);                 /* Remove a memory mapping. */
 	default:
 		thread_exit();
 	}
@@ -347,6 +351,19 @@ void close(int fd)
 	process_close_file(fd);
 	return file_close(close_file);
 }
+
+void *mmap (void *addr, size_t length, int writable, int fd, off_t offset) {
+	struct file *file = process_get_file(fd);
+	if(!file){
+		exit(-1);
+	}
+	return do_mmap(addr, length, writable, file, offset);
+}
+
+void munmap (void *addr) {
+
+}
+
 /*
 주소 값이 유저 영역 주소 값인지 확인
 유저 영역을 벗어난 영역일 경우 프로세스 종료(exit(-1)
@@ -364,3 +381,4 @@ void check_valid_buffer (void* buffer) {
 	struct page *page = spt_find_page(&thread_current()->spt, buffer);
 	if (page == NULL || page->writable == false) exit(-1); 
 }
+
