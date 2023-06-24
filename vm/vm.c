@@ -100,6 +100,10 @@ vm_alloc_page_with_initializer (enum vm_type type, void *upage, bool writable,
 		/* TODO: Insert the page into the spt. */
 		return spt_insert_page(spt, p);
 	}
+	else{
+		printf("Team 1237\n\n\n\n");
+	}
+
 err:
 	return false;
 }

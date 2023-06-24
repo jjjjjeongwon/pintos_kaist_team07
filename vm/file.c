@@ -2,6 +2,9 @@
 
 #include "vm/vm.h"
 #include "threads/vaddr.h"
+#include <stdio.h>
+#include "userprog/process.h"
+
 
 static bool file_backed_swap_in (struct page *page, void *kva);
 static bool file_backed_swap_out (struct page *page);
@@ -54,26 +57,65 @@ file_backed_destroy (struct page *page) {
 	struct file_page *file_page UNUSED = &page->file;
 }
 
+static bool
+lazy_load_segment (struct page *page, void *aux) {
+	struct lazy_load_data *ll_data = (struct lazy_load_data *) aux;
+	/* TODO: Load the segment from the file */
+	/* TODO: This called when the first page fault occurs on address VA. */
+	/* TODO: VA is available when calling this function. */
+	uint8_t *kpage = page->frame->kva;
+	struct file *file = ll_data->lazy_load_file;
+	size_t page_read_bytes = ll_data->page_read_bytes;
+	size_t page_zero_bytes = PGSIZE - page_read_bytes;
+	off_t ofs = ll_data->ofs;
+
+	file_seek (file, ofs);
+	if (file_read (file, kpage, page_read_bytes) != (int) page_read_bytes) {
+			palloc_free_page (kpage);
+			return false;
+		}
+	memset (kpage + page_read_bytes, 0, page_zero_bytes);
+	return true;
+}
+
 /* Do the mmap */
 void *
 do_mmap (void *addr, size_t length, int writable,
 		struct file *file, off_t offset) {
-	vm_alloc_page(VM_FILE, addr, writable);
-	vm_claim_page(addr);
-	struct page *page = spt_find_page(&thread_current()->spt, addr);
 	
-	printf("PAGE IS OKAY: %p\n\n\n\n\n", page);
-	printf("THIS IS KVA ADDR: %p\n\n\n\n\n", page->frame->kva);
+	 void * start_addr = addr;
+	// ASSERT ((read_bytes + zero_bytes) % PGSIZE == 0);
+	// ASSERT (pg_ofs (upage) == 0);
+	// ASSERT (ofs % PGSIZE == 0);
+	size_t read_bytes = length > file_length(file) ? file_length(file) : length;
+ 	size_t zero_bytes = PGSIZE - read_bytes % PGSIZE;
 
-	file_seek(file, offset);
-	if (file_read (file, page->frame->kva, length) != (int) length) {
-		printf("readche!!!!!!!\n\n\n");
-		palloc_free_page (page->frame->kva);
-		return false;
+	while (read_bytes > 0 || zero_bytes > 0) {
+		/* Do calculate how to fill this page.
+		 * We will read PAGE_READ_BYTES bytes from FILE
+		 * and zero the final PAGE_ZERO_BYTES bytes. */
+		size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
+		size_t page_zero_bytes = PGSIZE - page_read_bytes;
+
+		/* TODO: Set up aux to pass information to the lazy_load_segment. */
+		struct lazy_load_data *lazy_load_data =  (struct container*)malloc(sizeof(struct lazy_load_data));
+		lazy_load_data->lazy_load_file = file_reopen(file);
+		lazy_load_data->page_read_bytes = page_read_bytes;
+		// lazy_load_data->page_zero_bytes = page_zero_bytes;
+		lazy_load_data->ofs = offset;
+
+		void *aux = lazy_load_data;
+		if (!vm_alloc_page_with_initializer (VM_FILE, addr,
+					writable, lazy_load_segment, aux))
+			return NULL;
+
+		/* Advance. */
+		read_bytes -= page_read_bytes;
+		zero_bytes -= page_zero_bytes;
+		offset += page_read_bytes;
+		addr += PGSIZE;
 	}
-	memset (page->frame->kva + length, 0, PGSIZE - length);
-	
-	return addr;
+	return start_addr;
 }
 
 /* Do the munmap */
