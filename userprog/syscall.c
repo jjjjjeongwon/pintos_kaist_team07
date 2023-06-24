@@ -123,12 +123,6 @@ void syscall_handler(struct intr_frame *f UNUSED)
 	case SYS_CLOSE: /* Close a file. */
 		close(f->R.rdi);
 		break;
-<<<<<<< Updated upstream
-	case SYS_MMAP:
-		mmap(f->R.rdi, f->R.rsi, f->R.rdx,f->R.r10, f->R.r8);                   /* Map a file into memory. */
-	case SYS_MUNMAP:
-		munmap(f->R.rdi);                 /* Remove a memory mapping. */
-=======
 	case SYS_MMAP: /* Map a file into memory. */
 		f->R.rax = mmap(f->R.rdi, f->R.rsi, f->R.rdx, f->R.r10, f->R.r8);
 		break;
@@ -136,7 +130,6 @@ void syscall_handler(struct intr_frame *f UNUSED)
 		munmap(f->R.rdi);
 		break;
 
->>>>>>> Stashed changes
 	default:
 		thread_exit();
 	}
@@ -365,22 +358,14 @@ void close(int fd)
 
 void *mmap (void *addr, size_t length, int writable, int fd, off_t offset) {
 	struct file *file = process_get_file(fd);
-<<<<<<< Updated upstream
-	if(!file){
-=======
 	if(!file) {
->>>>>>> Stashed changes
 		exit(-1);
 	}
 	return do_mmap(addr, length, writable, file, offset);
 }
 
 void munmap (void *addr) {
-<<<<<<< Updated upstream
-
-=======
 	do_munmap(addr);
->>>>>>> Stashed changes
 }
 
 /*
