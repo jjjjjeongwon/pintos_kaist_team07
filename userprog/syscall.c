@@ -20,7 +20,6 @@
 
 void syscall_entry(void);
 void syscall_handler(struct intr_frame *);
-void check_address(void *addr);
 void get_argument(void *rsp, int *arg, int count);
 void halt(void);
 void exit(int status);
@@ -108,9 +107,11 @@ void syscall_handler(struct intr_frame *f UNUSED)
 		f->R.rax = filesize(f->R.rdi);
 		break;
 	case SYS_READ: /* Read from a file. */
+		// printf("call Read, rsp: %p, addr: %p\n", f->rsp, f->R.rsi);
 		f->R.rax = read(f->R.rdi, f->R.rsi, f->R.rdx);
 		break;
 	case SYS_WRITE: /* Write to a file. */
+		// printf("call Write\n");
 		f->R.rax = write(f->R.rdi, f->R.rsi, f->R.rdx);
 		break;
 	case SYS_SEEK: /* Change position in a file. */
@@ -122,10 +123,20 @@ void syscall_handler(struct intr_frame *f UNUSED)
 	case SYS_CLOSE: /* Close a file. */
 		close(f->R.rdi);
 		break;
+<<<<<<< Updated upstream
 	case SYS_MMAP:
 		mmap(f->R.rdi, f->R.rsi, f->R.rdx,f->R.r10, f->R.r8);                   /* Map a file into memory. */
 	case SYS_MUNMAP:
 		munmap(f->R.rdi);                 /* Remove a memory mapping. */
+=======
+	case SYS_MMAP: /* Map a file into memory. */
+		f->R.rax = mmap(f->R.rdi, f->R.rsi, f->R.rdx, f->R.r10, f->R.r8);
+		break;
+	case SYS_MUNMAP: /* Remove a memory mapping. */
+		munmap(f->R.rdi);
+		break;
+
+>>>>>>> Stashed changes
 	default:
 		thread_exit();
 	}
@@ -354,14 +365,22 @@ void close(int fd)
 
 void *mmap (void *addr, size_t length, int writable, int fd, off_t offset) {
 	struct file *file = process_get_file(fd);
+<<<<<<< Updated upstream
 	if(!file){
+=======
+	if(!file) {
+>>>>>>> Stashed changes
 		exit(-1);
 	}
 	return do_mmap(addr, length, writable, file, offset);
 }
 
 void munmap (void *addr) {
+<<<<<<< Updated upstream
 
+=======
+	do_munmap(addr);
+>>>>>>> Stashed changes
 }
 
 /*
