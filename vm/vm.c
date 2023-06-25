@@ -96,12 +96,13 @@ vm_alloc_page_with_initializer (enum vm_type type, void *upage, bool writable,
 				uninit_new(p, upage, init, VM_ANON, aux, anon_initializer);
 				break;
 		} 
+		struct lazy_load_data *_lazy_load_data = aux; 
 		p->writable = writable;
+		if( type == VM_FILE)
+			p->init_address = _lazy_load_data->init_addr;
+		
 		/* TODO: Insert the page into the spt. */
 		return spt_insert_page(spt, p);
-	}
-	else{
-		printf("Team 1237\n\n\n\n");
 	}
 
 err:

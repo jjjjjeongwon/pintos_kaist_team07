@@ -48,6 +48,7 @@ struct page {
 
 	/* Your implementation */
 	struct hash_elem elem;
+	void* init_address;
 	bool writable;
 	
 	/* Per-type data are binded into the union.

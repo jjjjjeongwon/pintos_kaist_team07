@@ -82,40 +82,37 @@ lazy_load_segment (struct page *page, void *aux) {
 void *
 do_mmap (void *addr, size_t length, int writable,
 		struct file *file, off_t offset) {
+		
+	struct file *re_file = file_reopen(file);
+	if (re_file ==NULL){
+		return NULL;
+	}
 	
-	 void * start_addr = addr;
-	// ASSERT ((read_bytes + zero_bytes) % PGSIZE == 0);
-	// ASSERT (pg_ofs (upage) == 0);
-	// ASSERT (ofs % PGSIZE == 0);
-	size_t read_bytes = length > file_length(file) ? file_length(file) : length;
- 	size_t zero_bytes = PGSIZE - read_bytes % PGSIZE;
+	uint32_t read_bytes = file_length(re_file);
+	void* init_addr = addr;
+	void* upage = addr;
+	
 
-	while (read_bytes > 0 || zero_bytes > 0) {
-		/* Do calculate how to fill this page.
-		 * We will read PAGE_READ_BYTES bytes from FILE
-		 * and zero the final PAGE_ZERO_BYTES bytes. */
+	while (read_bytes > 0 /*|| zero_bytes > 0*/) {
 		size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
-		size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
 		/* TODO: Set up aux to pass information to the lazy_load_segment. */
-		struct lazy_load_data *lazy_load_data =  (struct container*)malloc(sizeof(struct lazy_load_data));
-		lazy_load_data->lazy_load_file = file_reopen(file);
-		lazy_load_data->page_read_bytes = page_read_bytes;
-		// lazy_load_data->page_zero_bytes = page_zero_bytes;
+		struct lazy_load_data* lazy_load_data =  malloc(sizeof(struct lazy_load_data));
+		lazy_load_data->lazy_load_file = re_file;
 		lazy_load_data->ofs = offset;
+		lazy_load_data->page_read_bytes = page_read_bytes;
+		lazy_load_data->init_addr = init_addr;
+		
 
-		void *aux = lazy_load_data;
-		if (!vm_alloc_page_with_initializer (VM_FILE, addr,
-					writable, lazy_load_segment, aux))
-			return NULL;
+		vm_alloc_page_with_initializer (VM_FILE, upage, writable, lazy_load_segment, lazy_load_data);
+			
 
 		/* Advance. */
 		read_bytes -= page_read_bytes;
-		zero_bytes -= page_zero_bytes;
 		offset += page_read_bytes;
-		addr += PGSIZE;
+		upage += PGSIZE;
 	}
-	return start_addr;
+	return init_addr;
 }
 
 /* Do the munmap */
