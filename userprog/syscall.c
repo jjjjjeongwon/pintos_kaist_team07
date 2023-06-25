@@ -35,11 +35,10 @@ int write(int fd, const void *buffer, unsigned size);
 void seek(int fd, unsigned position);
 unsigned tell(int fd);
 void close(int fd);
-
-void check_address(void *addr);
+struct page *check_address(void *addr);
 int process_add_file(struct file *f);
 struct file *process_get_file(int fd);
-void check_valid_buffer (void* buffer);
+void check_valid_buffer (void* buffer, unsigned size, bool to_write);
 
 /* System call.
  *
@@ -255,8 +254,7 @@ buffer 안에 fd 로 열려있는 파일로부터 size 바이트를 읽습니다
 */
 int read(int fd, void *buffer, unsigned size)
 {
-	check_address(buffer);
-    check_valid_buffer (buffer);
+    check_valid_buffer (buffer, size, true);
     int file_size;
     char *read_buffer = buffer;
     if (fd == 0)
@@ -298,8 +296,7 @@ int write(int fd, const void *buffer, unsigned size)
 {
 	if (fd < -8000 || fd > 8000) exit(-1);
 
-	// JUNHO: 비교 해보기(1)
-	check_address(buffer);
+	check_valid_buffer(buffer, size, false);
 	int file_size;
 	if (fd == STDOUT_FILENO)
 	{
@@ -374,8 +371,7 @@ void munmap (void *addr) {
 주소 값이 유저 영역 주소 값인지 확인
 유저 영역을 벗어난 영역일 경우 프로세스 종료(exit(-1)
 */
-void check_address(void *addr)
-{
+struct page *check_address(void *addr) {
 	struct thread *curr = thread_current();
 
 #ifdef VM
@@ -397,8 +393,11 @@ void check_address(void *addr)
 #endif
 }
 
-void check_valid_buffer (void* buffer) {
+void check_valid_buffer (void* buffer, unsigned size, bool to_write) {
 	struct page *page = spt_find_page(&thread_current()->spt, buffer);
-	if (page == NULL || page->writable == false) exit(-1); 
+	for (char i = 0; i <= size; i++) {
+		struct page *page = check_address(buffer + i);
+		if (to_write == true && page->writable == false) exit(-1);
+	}
 }
 

@@ -202,9 +202,7 @@ vm_try_handle_fault (struct intr_frame *f UNUSED, void *addr UNUSED,
 	/* TODO: Your code goes here */
 	if (addr == NULL) exit(-1);
 	if (!is_user_vaddr(addr)) exit(-1);
-	// if(0x04000000 <= addr && addr <= USER_STACK - (1 << 20)) exit(-1);
-	
-	// if(write && addr >= 0x400000 && addr <= 0x604000) exit(-1);
+	if (addr == 0x04000000) exit(-1);
 
 	// printf("rsp: %p, addr %p\n",f->rsp, addr);
 
@@ -225,7 +223,6 @@ vm_try_handle_fault (struct intr_frame *f UNUSED, void *addr UNUSED,
 			if (find_stack_page()) {
 				struct page *stack_page = find_stack_page();
 				if (f->rsp-8 <= addr && addr < stack_page->va) {
-					// printf("call SG %p, rsp: %p\n\n", addr, f->rsp);
 					if (vm_stack_growth(find_stack_page()->va-PGSIZE)) {
 						stack_page->uninit.type &= ~VM_MARKER_0;
 						return true;
