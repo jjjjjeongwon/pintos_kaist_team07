@@ -35,6 +35,7 @@ int write(int fd, const void *buffer, unsigned size);
 void seek(int fd, unsigned position);
 unsigned tell(int fd);
 void close(int fd);
+
 void check_address(void *addr);
 int process_add_file(struct file *f);
 struct file *process_get_file(int fd);
@@ -72,7 +73,6 @@ void syscall_init(void)
 void syscall_handler(struct intr_frame *f UNUSED)
 {
 	// TODO: Your implementation goes here.
-	check_address(f->rsp);
 	int syscall_num = f->R.rax;
 	switch (syscall_num)
 	{
@@ -297,6 +297,8 @@ buffer로부터 open file fd로 size 바이트를 적어줍니다.
 int write(int fd, const void *buffer, unsigned size)
 {
 	if (fd < -8000 || fd > 8000) exit(-1);
+
+	// JUNHO: 비교 해보기(1)
 	check_address(buffer);
 	int file_size;
 	if (fd == STDOUT_FILENO)
@@ -375,10 +377,24 @@ void munmap (void *addr) {
 void check_address(void *addr)
 {
 	struct thread *curr = thread_current();
-	if (is_kernel_vaddr(addr) || !spt_find_page(&thread_current()->spt, addr))
+
+#ifdef VM
+	if(addr == NULL){
+		exit(-1);
+	}
+	struct page *page = spt_find_page(&thread_current()->spt, addr);
+
+	if (is_kernel_vaddr(addr) || !page)
 	{
 		exit(-1);
 	}
+	return page;
+#else
+	if(!is_user_vaddr(addr) || pml4_get_page(curr->pml4, addr) == NULL)
+	{
+		exit(-1);
+	}
+#endif
 }
 
 void check_valid_buffer (void* buffer) {

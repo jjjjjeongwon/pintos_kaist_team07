@@ -80,8 +80,6 @@ vm_alloc_page_with_initializer (enum vm_type type, void *upage, bool writable,
 	ASSERT (VM_TYPE(type) != VM_UNINIT)
 
 	struct supplemental_page_table *spt = &thread_current ()->spt;
-
-	/* Check wheter the upage is already occupied or not. */
 	
 	if (spt_find_page (spt, upage) == NULL) {
 		/* TODO: Create the page, fetch the initialier according to the VM type,
@@ -100,10 +98,6 @@ vm_alloc_page_with_initializer (enum vm_type type, void *upage, bool writable,
 		/* TODO: Insert the page into the spt. */
 		return spt_insert_page(spt, p);
 	}
-	else{
-		printf("Team 1237\n\n\n\n");
-	}
-
 err:
 	return false;
 }
@@ -111,11 +105,12 @@ err:
 /* Find VA from spt and return page. On error, return NULL. */
 struct page *
 spt_find_page (struct supplemental_page_table *spt UNUSED, void *va UNUSED) {
-	struct page p;
+	struct page *p = malloc(sizeof(struct page));
 	struct hash_elem *founded_elem;
 	
-	p.va = pg_round_down(va);
-	founded_elem = hash_find(&spt->vm, &p.elem);
+	p->va = pg_round_down(va);
+	founded_elem = hash_find(&spt->vm, &p->elem);
+	free(p); //JUNHO: 아,, free????
 	return founded_elem != NULL ? hash_entry(founded_elem, struct page, elem) : NULL;
 }
 
@@ -207,11 +202,17 @@ vm_try_handle_fault (struct intr_frame *f UNUSED, void *addr UNUSED,
 	/* TODO: Your code goes here */
 	if (addr == NULL) exit(-1);
 	if (!is_user_vaddr(addr)) exit(-1);
-	if(0x04000000 <= addr && addr <= USER_STACK - (1 << 20)) exit(-1);
-	// NOTE: 코드 세그먼트에 write 시 exit
-	if(write && addr >= 0x400000 && addr <= 0x604000) exit(-1);
+	// if(0x04000000 <= addr && addr <= USER_STACK - (1 << 20)) exit(-1);
+	
+	// if(write && addr >= 0x400000 && addr <= 0x604000) exit(-1);
 
 	// printf("rsp: %p, addr %p\n",f->rsp, addr);
+
+	//NOTE: 코드 세그먼트(0x400000보다 크고,0x604000보다 작다.)에 write 시 exit
+	if(write && addr >= 0x400000 && addr <=0x604000){
+		exit(-1);
+	}
+
 	if (user) { 
 		// printf("User\n");
 	}

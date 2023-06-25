@@ -83,14 +83,14 @@ void *
 do_mmap (void *addr, size_t length, int writable,
 		struct file *file, off_t offset) {
 	
-	 void * start_addr = addr;
+	void * start_addr = addr;
 	// ASSERT ((read_bytes + zero_bytes) % PGSIZE == 0);
 	// ASSERT (pg_ofs (upage) == 0);
 	// ASSERT (ofs % PGSIZE == 0);
-	size_t read_bytes = length > file_length(file) ? file_length(file) : length;
- 	size_t zero_bytes = PGSIZE - read_bytes % PGSIZE;
+	size_t read_bytes = file_length(file);
+	file = file_reopen(file);
 
-	while (read_bytes > 0 || zero_bytes > 0) {
+	while (read_bytes > 0 /* || zero_bytes > 0 */) {
 		/* Do calculate how to fill this page.
 		 * We will read PAGE_READ_BYTES bytes from FILE
 		 * and zero the final PAGE_ZERO_BYTES bytes. */
@@ -98,7 +98,7 @@ do_mmap (void *addr, size_t length, int writable,
 		size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
 		/* TODO: Set up aux to pass information to the lazy_load_segment. */
-		struct lazy_load_data *lazy_load_data =  (struct container*)malloc(sizeof(struct lazy_load_data));
+		struct lazy_load_data *lazy_load_data =  (struct lazy_load_data*)malloc(sizeof(struct lazy_load_data));
 		lazy_load_data->lazy_load_file = file_reopen(file);
 		lazy_load_data->page_read_bytes = page_read_bytes;
 		// lazy_load_data->page_zero_bytes = page_zero_bytes;
@@ -111,7 +111,6 @@ do_mmap (void *addr, size_t length, int writable,
 
 		/* Advance. */
 		read_bytes -= page_read_bytes;
-		zero_bytes -= page_zero_bytes;
 		offset += page_read_bytes;
 		addr += PGSIZE;
 	}
