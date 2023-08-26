@@ -28,9 +28,18 @@ vm_anon_init (void) {
 bool
 anon_initializer (struct page *page, enum vm_type type, void *kva) {
 	/* Set up the handler */
+	// if (page == NULL) {
+	// 	return false;
+	// }
 	page->operations = &anon_ops;
-
-	struct anon_page *anon_page = &page->anon;
+	// NOTE: 아직 anon_page 구조체의 추가 멤버 가능성을 고려해야 함.
+	// struct anon_page *anon_page = &page->anon;
+	// anon_page->init = page->uninit.init;
+	// anon_page->type = page->uninit.type;
+	// anon_page->aux = page->uninit.aux;
+	// anon_page->page_initializer = page->uninit.page_initializer;
+	
+	return true;
 }
 
 /* Swap in the page by read contents from the swap disk. */
@@ -49,4 +58,11 @@ anon_swap_out (struct page *page) {
 static void
 anon_destroy (struct page *page) {
 	struct anon_page *anon_page = &page->anon;
+
+	// JUNHO: (!) 
+	free(page->frame);
+	
+	// if(anon_page->aux != NULL){
+	// free(anon_page->aux);
+	// }
 }

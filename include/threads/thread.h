@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include "threads/interrupt.h"
 #include "threads/synch.h"
+#include <hash.h>
 #ifdef VM
 #include "vm/vm.h"
 #endif
@@ -122,17 +123,21 @@ struct thread {
    /* Shared between thread.c and synch.c. */
    struct list_elem elem;              /* List element. */
 
+
 #ifdef USERPROG
    /* Owned by userprog/process.c. */
    uint64_t *pml4;                     /* Page map level 4 */
 #endif
-#ifdef VM
+// NOTE: 코딩의 편의성을 위해 주석처리 해놨음.
+// #ifdef VM
    /* Table for whole virtual memory owned by thread. */
    struct supplemental_page_table spt;
-#endif
+// NOTE: 코딩의 편의성을 위해 주석처리 해놨음.
+// #endif
    /* Owned by thread.c. */
    struct intr_frame tf;               /* Information for switching */
    unsigned magic;                     /* Detects stack overflow. */
+   
 };
 
 /* If false (default), use round-robin scheduler.

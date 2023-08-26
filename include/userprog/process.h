@@ -14,4 +14,10 @@ struct file *process_get_file(int fd);
 void process_close_file(int fd);
 void remove_child_process(struct thread *cp);
 
+struct lazy_load_data {
+    size_t page_read_bytes;
+    size_t page_zero_bytes;
+    struct file *lazy_load_file;
+    off_t ofs;
+    };
 #endif /* userprog/process.h */

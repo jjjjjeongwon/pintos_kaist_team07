@@ -108,7 +108,6 @@ sema_try_down (struct semaphore *sema) {
    and wakes up one thread of those waiting for SEMA, if any.
 
    This function may be called from an interrupt handler. */
-// FIXME: 세마포어 해제 후 priority preemption 기능 추가
 void
 sema_up (struct semaphore *sema) {
 	enum intr_level old_level;
@@ -210,7 +209,6 @@ bool cmp_d_priority (const struct list_elem *a_elem, const struct list_elem *b_e
 
 /* lock을 점유하고 있는 스레드와 요청 하는 스레드의 우선순위를 비교하여
 priority donation을 수행하도록 수정 */
-// NOTE: lock_acquire를 이해한 대로 최종적으로 로직을 수정했음. 지금으로썬 더 수정할 필요 없어보임
 void
 lock_acquire (struct lock *lock) {	
 	ASSERT (lock != NULL);
@@ -267,8 +265,6 @@ void refresh_priority(void) {
 	}
 }
 
-/* 우선순위를 다시 계산 */
-// NOTE: 가독성 개선했고, 함수에 대해 이해를 마쳤음. 
 void remove_with_lock(struct lock *lock){
 	struct thread * curr = thread_current();
 	struct list_elem *curr_elem = list_begin(&curr->list_donation);
@@ -287,11 +283,6 @@ void remove_with_lock(struct lock *lock){
    An interrupt handler cannot acquire a lock, so it does not
    make sense to try to release a lock within an interrupt
    handler. */
-/* NOTE: 이 동작은 위의 주석을 읽어보면 CPU에서 running되는 `현재 스레드`가 점유하고 있는 lock을 놓아주는 상황을 일컬음. 
-그걸 상정하고 코드를 읽어본다면 refresh_priority()에서 왜 `현재 스레드`를 주축으로 동작하는 지 이해할 수 있었음. 
-`현재 스레드`는 이제 이 락을 놓아주는 상황이고, 그렇다면 점유하고 있는 동안 donation받았던 우선순위가 아닌 기존 본인의 우선순위로 돌아가야 알맞은 동작이 가능할 것.
-아다리가 맞아떨어진다.
-*/
 void
 lock_release (struct lock *lock) {
 	ASSERT (lock != NULL);

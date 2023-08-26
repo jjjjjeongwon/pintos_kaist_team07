@@ -16,10 +16,10 @@
 #include "filesys/file.h"
 #include "userprog/process.h"
 #include <string.h>
+#include "vm/vm.h"
 
 void syscall_entry(void);
 void syscall_handler(struct intr_frame *);
-void check_address(void *addr);
 void get_argument(void *rsp, int *arg, int count);
 void halt(void);
 void exit(int status);
@@ -35,9 +35,10 @@ int write(int fd, const void *buffer, unsigned size);
 void seek(int fd, unsigned position);
 unsigned tell(int fd);
 void close(int fd);
-void check_address(void *addr);
+struct page *check_address(void *addr);
 int process_add_file(struct file *f);
 struct file *process_get_file(int fd);
+void check_valid_buffer (void* buffer, unsigned size, bool to_write);
 
 /* System call.
  *
@@ -71,7 +72,6 @@ void syscall_init(void)
 void syscall_handler(struct intr_frame *f UNUSED)
 {
 	// TODO: Your implementation goes here.
-	check_address(f->rsp);
 	int syscall_num = f->R.rax;
 	switch (syscall_num)
 	{
@@ -106,9 +106,11 @@ void syscall_handler(struct intr_frame *f UNUSED)
 		f->R.rax = filesize(f->R.rdi);
 		break;
 	case SYS_READ: /* Read from a file. */
+		// printf("call Read, rsp: %p, addr: %p\n", f->rsp, f->R.rsi);
 		f->R.rax = read(f->R.rdi, f->R.rsi, f->R.rdx);
 		break;
 	case SYS_WRITE: /* Write to a file. */
+		// printf("call Write\n");
 		f->R.rax = write(f->R.rdi, f->R.rsi, f->R.rdx);
 		break;
 	case SYS_SEEK: /* Change position in a file. */
@@ -120,6 +122,13 @@ void syscall_handler(struct intr_frame *f UNUSED)
 	case SYS_CLOSE: /* Close a file. */
 		close(f->R.rdi);
 		break;
+	case SYS_MMAP: /* Map a file into memory. */
+		f->R.rax = mmap(f->R.rdi, f->R.rsi, f->R.rdx, f->R.r10, f->R.r8);
+		break;
+	case SYS_MUNMAP: /* Remove a memory mapping. */
+		munmap(f->R.rdi);
+		break;
+
 	default:
 		thread_exit();
 	}
@@ -151,7 +160,10 @@ void exit(int status)
 bool create(const char *file, unsigned initial_size)
 {
 	check_address(file);
-	return filesys_create(file, initial_size);
+	if (file == NULL) {
+		exit(-1);
+	}
+	return filesys_create(file, initial_size);	
 }
 
 /*
@@ -184,14 +196,14 @@ int exec(const char *cmd_line)
 {
 	char *fn_copy;
 	tid_t tid;
-
+	check_address(cmd_line);
 	fn_copy = palloc_get_page (PAL_ZERO);
 	if (fn_copy == NULL)
 		return TID_ERROR;
 	strlcpy (fn_copy, cmd_line, PGSIZE);
 	tid = process_exec(fn_copy);
 	if(tid == -1){
-		return -1;
+		exit(-1);
 	}
 	palloc_free_page(fn_copy);
 	return tid;
@@ -203,7 +215,6 @@ int exec(const char *cmd_line)
 */
 int wait(pid_t pid)
 {
-	// return 81;
 	return process_wait(pid);
 }
 /*
@@ -213,6 +224,9 @@ file(첫 번째 인자)이라는 이름을 가진 파일을 엽니다. 해당 �
 int open(const char *file)
 {
 	check_address(file);
+	if (file == NULL) {
+		exit(-1);
+	}
 	struct file *open_file = filesys_open(file);
 	if(open_file == NULL){
 		return -1;
@@ -228,7 +242,6 @@ fd(첫 번째 인자)로서 열려 있는 파일의 크기가 몇 바이트인�
 */
 int filesize(int fd)
 {
-
 	struct file *find_file = process_get_file(fd);
 	if(find_file == NULL)
 		return -1;
@@ -241,7 +254,7 @@ buffer 안에 fd 로 열려있는 파일로부터 size 바이트를 읽습니다
 */
 int read(int fd, void *buffer, unsigned size)
 {
-	check_address(buffer);
+    check_valid_buffer (buffer, size, true);
     int file_size;
     char *read_buffer = buffer;
     if (fd == 0)
@@ -258,7 +271,7 @@ int read(int fd, void *buffer, unsigned size)
         }
     }
     else if (fd == 1)
-    {
+    { 	
         return -1;
     }
     else
@@ -281,6 +294,9 @@ buffer로부터 open file fd로 size 바이트를 적어줍니다.
 */
 int write(int fd, const void *buffer, unsigned size)
 {
+	if (fd < -8000 || fd > 8000) exit(-1);
+
+	check_valid_buffer(buffer, size, false);
 	int file_size;
 	if (fd == STDOUT_FILENO)
 	{
@@ -338,15 +354,50 @@ void close(int fd)
 	process_close_file(fd);
 	return file_close(close_file);
 }
+
+void *mmap (void *addr, size_t length, int writable, int fd, off_t offset) {
+	struct file *file = process_get_file(fd);
+	if(!file) {
+		exit(-1);
+	}
+	return do_mmap(addr, length, writable, file, offset);
+}
+
+void munmap (void *addr) {
+	do_munmap(addr);
+}
+
 /*
 주소 값이 유저 영역 주소 값인지 확인
 유저 영역을 벗어난 영역일 경우 프로세스 종료(exit(-1)
 */
-void check_address(void *addr)
-{
+struct page *check_address(void *addr) {
 	struct thread *curr = thread_current();
-	if (is_kernel_vaddr(addr) || pml4_get_page(curr->pml4,addr) == NULL)
+
+#ifdef VM
+	if(addr == NULL){
+		exit(-1);
+	}
+	struct page *page = spt_find_page(&thread_current()->spt, addr);
+
+	if (is_kernel_vaddr(addr) || !page)
 	{
 		exit(-1);
 	}
+	return page;
+#else
+	if(!is_user_vaddr(addr) || pml4_get_page(curr->pml4, addr) == NULL)
+	{
+		exit(-1);
+	}
+#endif
 }
+
+void check_valid_buffer (void* buffer, unsigned size, bool to_write) {
+	struct page *page = spt_find_page(&thread_current()->spt, buffer);
+	for (char i = 0; i <= size; i++) {
+		struct page *page = check_address(buffer + i);
+		if (to_write == true && page->writable == false) exit(-1);
+	}
+}
+

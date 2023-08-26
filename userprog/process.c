@@ -22,8 +22,10 @@
 #include "threads/vaddr.h"
 #include "intrinsic.h"
 #include "threads/synch.h"
-#ifdef VM
+
+// NOTE: 임시수정
 #include "vm/vm.h"
+#ifdef VM
 #endif
 
 static void process_cleanup (void);
@@ -233,7 +235,9 @@ int process_exec(void *f_name)
 
     /* We first kill the current context */
     process_cleanup();
-
+#ifdef VM
+	supplemental_page_table_init(&cur->spt);
+#endif
     // for argument parsing
     char *parse[64]; 
     int count = 0;  
@@ -307,7 +311,6 @@ int process_add_file (struct file *f){
 	struct thread *cur = thread_current();
 	//파일 객체(struct file)를 가리키는 포인터를 File Descriptor 테이블에 추가
 	cur->fdt[cur->next_fd] = f;
-
 	//다음 File Descriptor 값 1 증가
 	cur->next_fd++;
 	//추가된 파일 객체의 File Descriptor 반환
@@ -361,9 +364,9 @@ int process_wait(tid_t child_tid UNUSED)
 void process_exit(void)
 {
 	struct thread *cur = thread_current();
-	for (int i = 2; i < 64; i++)
+	for (int i = 2; i < 128; i++)
 		close(i);
-	// palloc_free_multiple(cur->fdt,2);
+	palloc_free_multiple(cur->fdt,3);
 	file_close(cur->running_file);
 	sema_up(&cur->exit_sema);
 	sema_down(&cur->free_sema);
@@ -650,7 +653,7 @@ static bool install_page (void *upage, void *kpage, bool writable);
  * Return true if successful, false if a memory allocation error
  * or disk read error occurs. */
 static bool
-load_segment (struct file *file, off_t ofs, uint8_t *upage,
+ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		uint32_t read_bytes, uint32_t zero_bytes, bool writable) {
 	ASSERT ((read_bytes + zero_bytes) % PGSIZE == 0);
 	ASSERT (pg_ofs (upage) == 0);
@@ -726,6 +729,8 @@ install_page (void *upage, void *kpage, bool writable) {
 	return (pml4_get_page (t->pml4, upage) == NULL
 			&& pml4_set_page (t->pml4, upage, kpage, writable));
 }
+
+// NOTE: 임시 주석 처리
 #else
 /* From here, codes will be used after project 3.
  * If you want to implement the function for only project 2, implement it on the
@@ -733,9 +738,23 @@ install_page (void *upage, void *kpage, bool writable) {
 
 static bool
 lazy_load_segment (struct page *page, void *aux) {
+	struct lazy_load_data *ll_data = (struct lazy_load_data *) aux;
 	/* TODO: Load the segment from the file */
 	/* TODO: This called when the first page fault occurs on address VA. */
 	/* TODO: VA is available when calling this function. */
+	uint8_t *kpage = page->frame->kva;
+	struct file *file = ll_data->lazy_load_file;
+	size_t page_read_bytes = ll_data->page_read_bytes;
+	size_t page_zero_bytes = PGSIZE - page_read_bytes;
+	off_t ofs = ll_data->ofs;
+
+	file_seek (file, ofs);
+	if (file_read (file, kpage, page_read_bytes) != (int) page_read_bytes) {
+			palloc_free_page (kpage);
+			return false;
+		}
+	memset (kpage + page_read_bytes, 0, page_zero_bytes);
+	return true;
 }
 
 /* Loads a segment starting at offset OFS in FILE at address
@@ -766,8 +785,15 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
 		size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
+
 		/* TODO: Set up aux to pass information to the lazy_load_segment. */
-		void *aux = NULL;
+		struct lazy_load_data *lazy_load_data = malloc(sizeof(struct lazy_load_data));
+		lazy_load_data->lazy_load_file = file;
+		lazy_load_data->page_read_bytes = page_read_bytes;
+		lazy_load_data->page_zero_bytes = page_zero_bytes;
+		lazy_load_data->ofs = ofs;
+
+		void *aux = lazy_load_data;
 		if (!vm_alloc_page_with_initializer (VM_ANON, upage,
 					writable, lazy_load_segment, aux))
 			return false;
@@ -775,6 +801,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		/* Advance. */
 		read_bytes -= page_read_bytes;
 		zero_bytes -= page_zero_bytes;
+		ofs += page_read_bytes;
 		upage += PGSIZE;
 	}
 	return true;
@@ -785,12 +812,22 @@ static bool
 setup_stack (struct intr_frame *if_) {
 	bool success = false;
 	void *stack_bottom = (void *) (((uint8_t *) USER_STACK) - PGSIZE);
-
 	/* TODO: Map the stack on stack_bottom and claim the page immediately.
 	 * TODO: If success, set the rsp accordingly.
 	 * TODO: You should mark the page is stack. */
 	/* TODO: Your code goes here */
+	// NOTE: 당신은 vm/vm.h의 vm_type에 있는 
+	// 보조 marker(예 - VM_MARKER_0)들을 페이지를 마킹하는데 사용할 수 있습니다.
+	vm_alloc_page(VM_ANON, stack_bottom, true);
 
+	// HYUNGJUN: Mark Stack Page
+	struct page *stack_page = spt_find_page(&thread_current()->spt, stack_bottom);
+	if (stack_page) stack_page->uninit.type |= VM_MARKER_0;
+	
+	success = vm_claim_page(stack_bottom);
+
+	if (success)
+		if_->rsp = USER_STACK;
 	return success;
 }
 #endif /* VM */
